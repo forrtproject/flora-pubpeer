@@ -5,6 +5,13 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(httr2)
+library(jsonlite)
+library(FReD)
+library(tidyverse)
+library(glue)
+library(writexl)
+
 ```
 
 ## Load the converter
@@ -15,11 +22,20 @@ source("flora_converter.R")
 
 # load data convert
 ```{r}
+
 data <- csv_to_flora_json("flora.csv")
 df   <- flora_json_to_df(data)
-head(df)
-summary(df)
-cat("Total original papers:", length(data$results))
+df_nona <- df |> filter(!is.na(doi_o))
+
+rand_doi <- sample(df$doi_o, 50)
+df_rand50 <- df %>% filter (doi_o %in% rand_doi) # selecting fifty random rows
+df_rand50 <- df_rand50 |>
+              mutate(across(where(is.character), \(x) iconv(x, to = "UTF-8", sub = "byte")))
+
+cat("Total original papers:", nrow(df_rand50))
+
+# write_xlsx(df_rand50, "df_rand50.xlsx")
+
 ```
 
 
@@ -28,6 +44,136 @@ cat("Total original papers:", length(data$results))
 2. clean up so that only non na doi_o and value in either doi_r or url_r
 3. new csv file for output
 4. for each unique doi_o generate row with reference, outcome, outcome quote and outcome source columns, column with message. If multiple doi_r should include all in message.
+
+
+
+#  Some kinda function
+```{r}
+
+# ── Step 1: Count replications per original study
+replication_counts <- df_rand50 |>
+                    group_by(doi_o) |>
+                    summarise(n_replications = n(), .groups = "drop")
+
+
+# ── Step 2: Clean data and join counts ─────────────────────────────────────────
+
+flora_clean <- df_rand50 |>
+                filter(!is.na(doi_o)) |>
+                select(
+                  title_o, doi_o, journal_o,
+                  title_r, doi_r, journal_r,
+                  apa_ref_r,
+                  outcome, outcome_quote, outcome_quote_source
+                ) |>
+                left_join(replication_counts, by = "doi_o")
+
+
+
+
+# ── Step 3: Count replications per original study ──────────────────────────────
+
+replication_counts <- df_rand50 |>
+  group_by(doi_o) |>
+  summarise(n_replications = n(), .groups = "drop")
+
+# ── Step 4: Clean data and join counts ─────────────────────────────────────────
+
+flora_clean <- df_rand50 |>
+  filter(!is.na(doi_o)) |>
+  select(
+    title_o, doi_o, journal_o,
+    title_r, doi_r, journal_r,
+    apa_ref_r,
+    outcome, outcome_quote, outcome_quote_source
+  ) |>
+  left_join(replication_counts, by = "doi_o")
+
+# ── Step 5: Define comment generator function ───────
+
+generate_comment <- function(doi_o, doi_r, n_replications, apa_ref_r,
+                             outcome, outcome_quote, outcome_quote_source, ...) {
+
+              # Build outcome quote block only if it exists
+              quote_block <- if (!is.na(outcome_quote) &
+                                 nchar(trimws(outcome_quote)) > 0) {
+                glue("Outcome quote: {outcome_quote}")
+              } else {
+                "Outcome quote:"
+              }
+            
+              # Build quote source block only if it exists
+              source_block <- if (!is.na(outcome_quote_source) &
+                                  nchar(trimws(outcome_quote_source)) > 0) {
+                glue("Quote source: {outcome_quote_source}")
+              } else {
+                'Quote source: "Does not appear"'
+              }
+            
+              # Build the full comment
+              glue(
+                "According to data from the FORRT Library of Reproduction and Replication ",
+                "Attempts (FLoRA) there are {n_replications} replication attempt(s) of a ",
+                "finding from this study. Future research may learn from replications and ",
+                "build on them. Manual inspection of these articles may help to assess what ",
+                "led to the described outcome.\n\n",
+                "Replication article reference: {apa_ref_r}\n",
+                "Outcome: {outcome}\n",
+                "{quote_block}\n",
+                "{source_block}\n\n",
+                "FLoRA database is available online: https://dx.doi.org/10.17605/OSF.IO/9r62x\n\n",
+                "We describe why and how we submitted these automated comments here: ",
+                "https://github.com/forrtproject/flora-pubpeer/blob/main/README.md\n\n",
+                "FLoRA Notify Team"
+              )
+      }
+
+# ── Step 6: Generate comments for all studies ──────────────────────────────────
+
+flora_with_comments <- flora_clean |>
+  mutate(
+    comment_text = pmap_chr(
+      list(doi_o, doi_r, n_replications, apa_ref_r,
+           outcome, outcome_quote, outcome_quote_source),
+      generate_comment
+    )
+  )
+
+# ── Step 5: Spot check ─────────────────────────────────────────────────────────
+
+flora_with_comments |> select(doi_o, comment_text) |> head(3)
+
+# flora_with_comments$comment_text[1]
+
+
+# ── Step 6: Save outputs ───────────────────────────────────────────────────────
+
+# Full dataset with all columns
+# write_csv(flora_with_comments, "pubpeer_comments.csv")
+# write_xlsx(flora_with_comments, "pubpeer_comments.xlsx")
+
+
+
+
+
+
+```
+
+```{r}
+# Keeping bits and bobs here for now
+
+
+# Submission file - just DOI and comment
+flora_with_comments |>
+  select(doi_o, comment_text) |>
+  write_csv("pubpeer_comments_submission.csv")
+
+cat("Done! Generated", nrow(flora_with_comments), "comments.\n")
+
+
+
+```
+
 
 
 :::
