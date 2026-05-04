@@ -1,0 +1,2 @@
+# FLoRA Pubpeer Integration
+The PubPeer integration of the FORRT Library of Replication Attempts (FLoRA) is a proactive method to make researchers aware of replications of their own and others' research. For every original study, for which there is a replication attempt in FLoRA, a publicly visible comment will be posted on PubPeer.
