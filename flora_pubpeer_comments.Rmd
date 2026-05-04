@@ -1,0 +1,30 @@
+---
+title: "FLORA Converter — Notebook Test"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load the converter
+
+```{r}
+source("flora_converter.R")
+```
+
+# load data convert
+```{r}
+data <- csv_to_flora_json("flora.csv")
+cat("Total original papers:", length(data$results))
+```
+
+
+# process
+1. convert json back to data frame
+2. clean up so that only non na doi_o and value in either doi_r or url_r
+3. new csv file for output
+4. for each unique doi_o generate row with reference, outcome, outcome quote and outcome source columns, column with message. If multiple doi_r should include all in message.
+
+
+:::
