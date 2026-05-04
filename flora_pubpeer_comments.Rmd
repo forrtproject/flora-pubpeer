@@ -5,6 +5,9 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(readr)
 ```
 
 ## Load the converter
@@ -19,7 +22,11 @@ data <- csv_to_flora_json("flora.csv")
 df   <- flora_json_to_df(data)
 head(df)
 summary(df)
-cat("Total original papers:", length(data$results))
+# get random ones
+rand_doi <- sample(df$doi_o,50)
+dfrand50 <- df %>% filter(doi_o %in% rand_doi)
+nrow(dfrand50)
+
 ```
 
 
@@ -29,5 +36,62 @@ cat("Total original papers:", length(data$results))
 3. new csv file for output
 4. for each unique doi_o generate row with reference, outcome, outcome quote and outcome source columns, column with message. If multiple doi_r should include all in message.
 
+```{r}
+generate_flora_messages <- function(df) {
+  messages <- list()
 
+  for (doi in unique(df$doi_o)) {
+    rows <- df[df$doi_o == doi, ]
+    n    <- nrow(rows)
+
+    header <- paste0(
+      "According to data from the FORRT Library of Reproduction and Replication Attempts (FLoRA) ",
+      if (n == 1) "there is 1 replication attempt" else paste0("there are ", n, " replication attempts"),
+      " of a finding from this study. ",
+      "Future research may learn from replications and build on them. ",
+      "Manual inspection of these articles may help to assess what led to the described outcome."
+    )
+
+    entries <- vapply(seq_len(n), function(i) {
+      r <- rows[i, ]
+      quote_source_line <- if (!is.na(r$outcome_quote_source)) paste0("\nQuote source: \"", r$outcome_quote_source, "\"") else ""
+      paste0(
+        "Replication article reference: ", r$apa_ref_r, "\n",
+        "Outcome: \"", r$outcome, "\"\n",
+        "Outcome quote: ", r$outcome_quote,
+        quote_source_line
+      )
+    }, character(1))
+
+    footer <- paste0(
+      "FLoRA is available online: https://dx.doi.org/10.17605/OSF.IO/9r62x\n",
+      "We describe why and how we submitted these automated comments here: ",
+      "https://github.com/forrtproject/flora-pubpeer/blob/main/README.md\n\n",
+      "FLoRA Notify Team"
+    )
+
+    messages[[doi]] <- paste(c(header, entries, footer), collapse = "\n\n")
+  }
+
+  messages
+}
+```
+
+```{r}
+dfrand50 %>% filter(doi_o=="10.1016/j.obhdp.2006.10.001")
+```
+
+# create message
+```{r}
+msgs <- generate_flora_messages(dfrand50)
+msgs_df <- data.frame(
+  doi_o   = names(msgs),
+  message = unlist(msgs),
+  row.names = NULL,
+  stringsAsFactors = FALSE
+)
+msgs_df %>% filter(doi_o=="10.1016/j.obhdp.2006.10.001")
+readr::write_csv(msgs_df, "msgs.csv")
+
+```
 :::
