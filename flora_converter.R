@@ -158,3 +158,53 @@ csv_to_flora_json <- function(source) {
 
   list(results = results)
 }
+
+
+flora_json_to_df <- function(data) {
+  .n <- function(x) if (is.null(x)) NA else x
+
+  rows <- list()
+
+  for (paper in data$results) {
+    doi_o_fields <- list(
+      doi_o         = .n(paper$doi),
+      doi_o_hash    = .n(paper$doi_hash),
+      title_o       = .n(paper$title),
+      author_o      = if (length(paper$authors) > 0) jsonlite::toJSON(paper$authors, auto_unbox = TRUE) else NA,
+      journal_o     = .n(paper$journal),
+      year_o        = .n(paper$year),
+      volume_o      = .n(paper$volume),
+      issue_o       = .n(paper$issue),
+      pages_o       = .n(paper$pages),
+      apa_ref_o     = .n(paper$apa_ref),
+      bibtex_ref_o  = .n(paper$bibtex_ref),
+      url_o         = .n(paper$url)
+    )
+
+    related <- c(paper$record$replications, paper$record$reproductions)
+
+    for (entry in related) {
+      row <- c(doi_o_fields, list(
+        doi_r                = .n(entry$doi),
+        doi_r_hash           = .n(entry$doi_hash),
+        type                 = .n(entry$type),
+        title_r              = .n(entry$title),
+        author_r             = if (length(entry$authors) > 0) jsonlite::toJSON(entry$authors, auto_unbox = TRUE) else NA,
+        journal_r            = .n(entry$journal),
+        year_r               = .n(entry$year),
+        volume_r             = .n(entry$volume),
+        issue_r              = .n(entry$issue),
+        pages_r              = .n(entry$pages),
+        apa_ref_r            = .n(entry$apa_ref),
+        bibtex_ref_r         = .n(entry$bibtex_ref),
+        url_r                = .n(entry$url),
+        outcome              = .n(entry$outcome),
+        outcome_quote        = .n(entry$outcome_quote),
+        outcome_quote_source = .n(entry$outcome_quote_source)
+      ))
+      rows <- c(rows, list(as.data.frame(row, stringsAsFactors = FALSE)))
+    }
+  }
+
+  do.call(rbind, rows)
+}

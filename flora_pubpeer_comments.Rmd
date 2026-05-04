@@ -16,6 +16,9 @@ source("flora_converter.R")
 # load data convert
 ```{r}
 data <- csv_to_flora_json("flora.csv")
+df   <- flora_json_to_df(data)
+head(df)
+summary(df)
 cat("Total original papers:", length(data$results))
 ```
 
