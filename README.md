@@ -8,11 +8,11 @@ This project is funded by UK Research and Innovation (UKRI) as part of the Makin
 
 ## FAQs
 #### What is RepNote?
-RepNote is a tool that makes replications more visible and linked to the original
-research. We link the replications from the FORRT Library of Replication Attempts
-(FLoRA) to original studies and create post-publication comments on [pubpeer.com](http://pubpeer.com)
-containing information on replication and reproduction attempts (i.e., number of
-replications, description of replication outcome, and success of replications).
+    RepNote is a tool that makes replications more visible and linked to the original
+    research. We link the replications from the FORRT Library of Replication Attempts
+    (FLoRA) to original studies and create post-publication comments on [pubpeer.com](http://pubpeer.com)
+    containing information on replication and reproduction attempts (i.e., number of
+    replications, description of replication outcome, and success of replications).
 
 #### Why notify original authors?
 When scientists discover something, we want to check the findings to make sure the results bear up. It benefits the scientific community and the public to make attempts to repeat studies easily visible. To make it transparent that a replication has been attempted and more information about the original study’s claims have been tested, we think a public approach to notification is important. Replications are a prerequisite for a robust research claim, and if these attempts to check original work are not rewarded or seen, unreliable findings will be built on. We think that notifying readers and authors of replication attempts makes relevant information more accessible and is useful for the scientific landscape.
