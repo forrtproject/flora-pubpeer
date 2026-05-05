@@ -376,7 +376,7 @@ df &lt;- df |&gt;
   mutate(across(where(is.character), \(x) trimws(x)))
 
 # Select 50 random rows
-rand_doi &lt;- sample(df$doi_o, 50)
+rand_doi &lt;- sample(df$doi_o, 200)
 df_rand50 &lt;- df |&gt; filter(doi_o %in% rand_doi)</code></pre>
 </div>
 <div id="process" class="section level1">
@@ -397,17 +397,34 @@ should include all in message.</li>
     rows &lt;- df[df$doi_o == doi, ]
     n    &lt;- nrow(rows)
 
-    header &lt;- paste0(
-      &quot;According to data from the FORRT Library of Reproduction and Replication Attempts (FLoRA) &quot;,
-      if (n == 1) &quot;there is 1 replication attempt&quot; else paste0(&quot;there are &quot;, n, &quot; replication attempts&quot;),
-      &quot; of a finding from this study. &quot;,
-      &quot;Future research may learn from replications and build on them. &quot;,
-      &quot;Manual inspection of these articles may help to assess what led to the described outcome.&quot;
-    )
+      n_replications  &lt;- sum(tolower(rows$type) == &quot;replication&quot;, na.rm = TRUE)
+      n_reproductions &lt;- sum(tolower(rows$type) == &quot;reproduction&quot;, na.rm = TRUE)
+      
+      attempt_text &lt;- if (n_reproductions == 0) {
+        if (n_replications == 1) &quot;there is 1 replication attempt&quot; else paste0(&quot;there are &quot;, 
+                                                                              n_replications, &quot; replication attempts&quot;)
+      } else if (n_replications == 0) {
+        if (n_reproductions == 1) &quot;there is 1 reproduction attempt&quot; else paste0(&quot;there are &quot;, 
+                                                                            n_reproductions, &quot; reproduction attempts&quot;)
+      } else {
+        paste0(&quot;there are &quot;, n_replications,
+               if (n_replications == 1) &quot; replication attempt&quot; else &quot; replication attempts&quot;,
+               &quot; and &quot;, n_reproductions,
+               if (n_reproductions == 1) &quot; reproduction attempt&quot; else &quot; reproduction attempts&quot;)
+      }
+      
+      header &lt;- paste0(
+        &quot;According to data from the FORRT Library of Reproduction and Replication Attempts (FLoRA), &quot;,
+        attempt_text,
+        &quot; of a finding from this study. &quot;,
+        &quot;Future research may learn from replications and build on them. &quot;,
+        &quot;Manual inspection of these articles may help to assess what led to the described outcome.&quot;
+      )
 
     entries &lt;- vapply(seq_len(n), function(i) {
       r &lt;- rows[i, ]
-      quote_source_line &lt;- if (!is.na(r$outcome_quote_source)) paste0(&quot;\nQuote source: \&quot;&quot;, r$outcome_quote_source, &quot;\&quot;&quot;) else &quot;&quot;
+      quote_source_line &lt;- if (!is.na(r$outcome_quote_source)) paste0(&quot;\nQuote source: \&quot;&quot;, 
+                                                                      r$outcome_quote_source, &quot;\&quot;&quot;) else &quot;&quot;
       paste0(
         &quot;Replication article reference: &quot;, r$apa_ref_r, &quot;\n&quot;,
         &quot;Outcome: \&quot;&quot;, r$outcome, &quot;\&quot;\n&quot;,
@@ -439,8 +456,10 @@ msgs_df &lt;- data.frame(
   stringsAsFactors = FALSE
 )
 msgs_df %&gt;% filter(doi_o==&quot;10.1016/j.obhdp.2006.10.001&quot;)</code></pre>
-<pre><code>## [1] doi_o   message
-## &lt;0 rows&gt; (or 0-length row.names)</code></pre>
+<pre><code>##                         doi_o
+## 1 10.1016/j.obhdp.2006.10.001
+##                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          message
+## 1 According to data from the FORRT Library of Reproduction and Replication Attempts (FLoRA), there are 2 replication attempts of a finding from this study. Future research may learn from replications and build on them. Manual inspection of these articles may help to assess what led to the described outcome.\n\nReplication article reference: Klein, R. A., Vianello, M., Hasselman, F., Adams, B. G., Adams, R. B., Alper, S., Aveyard, M., Axt, J. R., Babalola, M. T., Bahn--k, --., Batra, R., Berkics, M., Bernstein, M. J., Berry, D. R., Bialobrzeska, O., Binan, E. D., Bocian, K., Brandt, M. J., Busching, R., --- Nosek, B. A. (2018). Many Labs 2: Investigating Variation in Replicability Across Samples and Settings. Advances in Methods and Practices in Psychological Science, 1(4), 443---490. https://doi.org/10.1177/2515245918810225\nOutcome: &quot;failed&quot;\nOutcome quote: This result does not support the hypoth- esis that perceived power is higher with greater vertical distance. The replication effect was in the same direc- tion as, but much smaller than, the original (d = 0.03, 95% CI = [---0.01, 0.08], vs. original d = 0.55).\nQuote source: &quot;pg. 18&quot;\n\nReplication article reference: Giessner, S. R., &amp; Schubert, T. W. (2019). Power and Vertical Positions in an Organization Chart: A Pre-Registered Replication Report of Study 3a and a Modification of Study 1a, Giessner &amp; Schubert (2007). Collabra: Psychology, 5(1). https://doi.org/10.1525/collabra.216\nOutcome: &quot;mixed&quot;\nOutcome quote: Our current preregistered Study 1 confirms original Study 3a of Giessner and Schubert (2007).\n\nFLoRA database is available online: https://dx.doi.org/10.17605/OSF.IO/9r62x\nWe describe why and how we submitted these automated comments here: https://github.com/forrtproject/flora-pubpeer/blob/main/README.md\n\nFLoRA Notify Team</code></pre>
 <pre class="r"><code>readr::write_csv(msgs_df, &quot;msgs.csv&quot;)</code></pre>
 <p>:::</p>
 </div>
