@@ -175,13 +175,21 @@ entries <- vapply(seq_len(n), function(i) {
 
 # create message
 ```{r}
-msgs <- generate_flora_messages(df_rand50)
 msgs_df <- data.frame(
   doi_o   = names(msgs),
   message = unlist(msgs),
   row.names = NULL,
   stringsAsFactors = FALSE
-)
+) |>
+  mutate(
+    message = iconv(message, from = "UTF-8", to = "UTF-8", sub = " "),
+    message = str_replace_all(message, "[^\x01-\x7F]", "-"),
+    message = str_replace_all(message, "-{2,}", "-")
+  )
+
+
+
+
 msgs_df %>% filter(doi_o=="10.1016/j.obhdp.2006.10.001")
 readr::write_csv(msgs_df, "msgs.csv")
 
