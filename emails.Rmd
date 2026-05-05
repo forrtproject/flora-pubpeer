@@ -6,7 +6,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-pacman::p_load(chromote, rvest, dplyr, stringr, httr,tidyverse,readr)
+pacman::p_load(chromote, rvest, dplyr, stringr, httr,tidyverse,readr,dotenv)
 ```
 
 ## Load the converter
@@ -72,5 +72,40 @@ results <- purrr::map(sample_df$doi_o, purrr::possibly(
   otherwise = tibble::tibble(url = NA_character_, emails = NA_character_, extraction_method = NA_character_)
 )) %>%
   dplyr::bind_rows()
+View(results)
+results <- results %>% dplyr::distinct(url, emails, .keep_all = TRUE)
+
+length(unique(sample_df$doi_o))
+results %>% filter(is.na(emails)) %>% nrow
+
+write.csv(results,"email_test.csv")
+
+length(unique(sample_df$doi_o))
+results %>%
+  filter(!is.na(emails)) %>%
+  dplyr::summarise(n_distinct(url))
+```
+
+
+#test with unpaywall added 
+```{r}
+doi_to_get <- results %>% filter(is.na(emails))
+View(doi_to_get)
+doi_small <- doi_to_get[1:10,]
+dotenv::load_dot_env()
+email <- Sys.getenv("UNPAYWALL_EMAIL")
+
+result_unpaywall <- purrr::map(doi_small$url, purrr::possibly(
+  \(doi) get_email_main(doi, unpaywall_email = email, debug_if_none = FALSE),
+  otherwise = tibble::tibble(url = NA_character_, emails = NA_character_, extraction_method = NA_character_)
+)) %>%
+  dplyr::bind_rows()
+
+View(result_unpaywall)
+a <- get_email_main("10.1111/j.1467-6494.2012.00807.x", 
+               unpaywall_email = email,
+               debug_if_none = FALSE)
+
+
 
 ```

@@ -80,6 +80,7 @@ library(chromote)
 
 get_email_main <- function(doi_or_url,
                            scrapeops_api_key = NULL,
+                           unpaywall_email = NULL,
                            quiet = FALSE,
                            force_chromote = FALSE,
                            force_proxy = FALSE,
@@ -430,6 +431,17 @@ get_email_main <- function(doi_or_url,
   }
 
 
+  # 5. PDF fallback via Unpaywall (and Sci-Hub)
+  if (!quiet) message("Attempting PDF extraction.")
+  doi_only <- stringr::str_remove(doi_or_url, "https://doi.org/")
+  emails_pdf <- tryCatch(
+    get_email_from_pdf(doi_only, unpaywall_email = unpaywall_email, quiet = quiet),
+    error = function(e) NULL
+  )
+  if (!is.null(emails_pdf) && !all(is.na(emails_pdf$emails))) {
+    return(emails_pdf)
+  }
+
   # If all attempts fail to find emails, return NA with consistent tibble structure
   if (!quiet) message("No emails found for URL: ", doi_or_url)
   return(tibble(
@@ -704,12 +716,37 @@ get_email <- function(doi_or_url,
 
 
 
-get_email_from_pdf <- function(doi_or_url, scrapeops_api_key = NULL, quiet = FALSE) {
-  if (!quiet) message("Scraping: ", doi_or_url)
+get_unpaywall_pdf_url <- function(doi, email) {
+  tryCatch({
+    resp <- httr::GET(paste0("https://api.unpaywall.org/v2/", doi, "?email=", email))
+    if (httr::status_code(resp) != 200) return(NULL)
+    data <- jsonlite::fromJSON(httr::content(resp, "text", encoding = "UTF-8"))
+    data$best_oa_location$url_for_pdf
+  }, error = function(e) NULL)
+}
+
+get_email_from_pdf <- function(doi_or_url, unpaywall_email = NULL, scrapeops_api_key = NULL, quiet = FALSE) {
+  if (!quiet) message("Scraping PDF: ", doi_or_url)
 
   pdf_file <- tempfile(fileext = ".pdf")
+  downloaded <- FALSE
 
-  if (!stringr::str_detect(doi_or_url, stringr::fixed("http"))) {
+  # Try Unpaywall first if email provided and input looks like a DOI
+  if (!is.null(unpaywall_email) && !stringr::str_detect(doi_or_url, stringr::fixed("http"))) {
+    if (!quiet) message("Trying Unpaywall for: ", doi_or_url)
+    pdf_url <- get_unpaywall_pdf_url(doi_or_url, unpaywall_email)
+    if (!is.null(pdf_url) && !is.na(pdf_url)) {
+      tryCatch({
+        download.file(pdf_url, pdf_file, mode = "wb", quiet = quiet)
+        downloaded <- TRUE
+        if (!quiet) message("Downloaded PDF via Unpaywall.")
+      }, error = function(e) {
+        if (!quiet) message("Unpaywall PDF download failed: ", e$message)
+      })
+    }
+  }
+
+  if (!downloaded && !stringr::str_detect(doi_or_url, stringr::fixed("http"))) {
     url <- paste0("https://sci-hub.se/", doi_or_url)
 
     response <- purrr::possibly(httr::GET)(url, httr::add_headers("User-Agent" = "Mozilla/5.0"))
@@ -750,10 +787,16 @@ get_email_from_pdf <- function(doi_or_url, scrapeops_api_key = NULL, quiet = FAL
     paper_url <- paper_url_raw %>% httr::build_url()
 
     readr::read_file_raw(paper_url) %>% writeBin(pdf_file)
+    downloaded <- TRUE
 
-  } else if (stringr::str_detect(doi_or_url, "osf.io")) {
+  } else if (!downloaded && stringr::str_detect(doi_or_url, "osf.io")) {
     doi_or_url <- paste0(doi_or_url, "/download")
     download.file(doi_or_url, pdf_file, mode = "wb")
+    downloaded <- TRUE
+  }
+
+  if (!downloaded) {
+    return(tibble::tibble(url = doi_or_url, emails = NA_character_, extraction_method = NA_character_))
   }
 
   pdf_text <- pdftools::pdf_text(pdf_file)
@@ -764,8 +807,9 @@ get_email_from_pdf <- function(doi_or_url, scrapeops_api_key = NULL, quiet = FAL
   emails <- unique(emails)
 
   if (length(emails) > 0) {
-    email_df <- tibble::tibble(url = doi_or_url, emails = emails)
+    email_df <- tibble::tibble(url = doi_or_url, emails = emails, extraction_method = "pdf")
   } else {
-    email_df <- tibble::tibble(url = doi_or_url, emails = NA_character_)
+    email_df <- tibble::tibble(url = doi_or_url, emails = NA_character_, extraction_method = NA_character_)
   }
+  email_df
 }
