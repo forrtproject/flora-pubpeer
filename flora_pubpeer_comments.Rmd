@@ -91,9 +91,9 @@ generate_flora_messages <- function(df) {
     
 
     footer <- paste0(
-      "FLoRA database is available online: https://dx.doi.org/10.17605/OSF.IO/9r62x\n",
+      "FLoRA database is available online:   [https://dx.doi.org/10.17605/OSF.IO/9r62x](https://dx.doi.org/10.17605/OSF.IO/9r62x)\n",
       "We describe why and how we submitted these automated comments here: ",
-      "https://github.com/forrtproject/flora-pubpeer/blob/main/README.md\n\n",
+      "[https://github.com/forrtproject/flora-pubpeer/blob/main/README.md](https://github.com/forrtproject/flora-pubpeer/blob/main/README.md)\n\n",
       "FLoRA Notify Team"
     )
 
