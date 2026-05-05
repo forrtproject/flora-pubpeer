@@ -27,8 +27,6 @@ check <- df %>%
   ungroup
 
 View(check)
-
-
 write.csv(check, "check.csv")
 ```
 # are there NAs in apa_ref_r

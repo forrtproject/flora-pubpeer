@@ -1,0 +1,76 @@
+---
+title: "FLORA PubPeer - author emails"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+pacman::p_load(chromote, rvest, dplyr, stringr, httr,tidyverse,readr)
+```
+
+## Load the converter
+
+```{r}
+source("flora_converter.R")
+source("scrape_emails.R")
+```
+
+# load data convert
+```{r}
+
+data <- csv_to_flora_json("flora.csv")
+df   <- flora_json_to_df(data)
+
+# Fix encoding immediately after loading
+df <- df |>
+  mutate(across(where(is.character), \(x) iconv(x, from = "latin1", to = "UTF-8", sub = " "))) |>
+  mutate(across(where(is.character), \(x) str_replace_all(x, "[^\x01-\x7F]", "-"))) |>
+  mutate(across(where(is.character), \(x) str_replace_all(x, "\\s+", " "))) |>
+  mutate(across(where(is.character), \(x) trimws(x)))
+ 
+# clean up FLoRA
+# remove uninformative and APA ref NAs
+table(df$outcome)
+df <- df %>% filter(outcome!= "unclear") %>% filter(outcome != "uninformative")
+df <- df %>% filter(!(is.na(apa_ref_r)))
+
+sample_doi <- sample(df$doi_o,50)
+
+sample_df <- df %>% filter(doi_o %in% sample_doi)
+
+View(sample_df)
+
+```
+
+#email function
+```{r}
+email_res <- purrr::map(sample_df$doi_o, purrr::possibly(get_email_main, otherwise = NULL)) %>%
+  dplyr::bind_rows()
+
+
+###
+# Step 1: direct GET
+response <- httr::GET("https://doi.org/10.1038/nature01930", 
+                      httr::add_headers("User-Agent" = "Mozilla/5.0"))
+response$status_code
+
+page <- rvest::read_html(httr::content(response, "text"))
+
+# check mailto links
+page %>% rvest::html_nodes("a[href^='mailto']") %>% rvest::html_attr("href")
+
+# check cloudflare-protected emails
+page %>% rvest::html_nodes("a[href*='email-protection#']") %>% rvest::html_attr("href")
+
+
+get_email_main("10.1038/nature01930", debug_if_none = FALSE)
+
+
+results <- purrr::map(sample_df$doi_o, purrr::possibly(
+  \(doi) get_email_main(doi, debug_if_none = FALSE),
+  otherwise = tibble::tibble(url = NA_character_, emails = NA_character_, extraction_method = NA_character_)
+)) %>%
+  dplyr::bind_rows()
+
+```
