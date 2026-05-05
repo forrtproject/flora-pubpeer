@@ -75,6 +75,7 @@ csv_to_flora_json <- function(source) {
         apa_ref   = .parse_val(row[["apa_ref_o"]]),
         bibtex_ref = .parse_val(row[["bibtex_ref_o"]]),
         url       = .parse_val(row[["url_o"]]),
+        oa_url    = .parse_val(row[["oa_url_o"]]),
         record    = list(
           stats = list(
             n_replications_total     = 0L,
@@ -112,6 +113,7 @@ csv_to_flora_json <- function(source) {
       apa_ref              = .parse_val(row[["apa_ref_r"]]),
       bibtex_ref           = .parse_val(row[["bibtex_ref_r"]]),
       url                  = .parse_val(row[["url_r"]]),
+      oa_url               = .parse_val(row[["oa_url_r"]]),
       outcome              = .parse_val(row[["outcome"]]),
       outcome_quote        = .parse_val(row[["outcome_quote"]]),
       outcome_quote_source = .parse_val(row[["outcome_quote_source"]])
@@ -178,7 +180,8 @@ flora_json_to_df <- function(data) {
       pages_o       = .n(paper$pages),
       apa_ref_o     = .n(paper$apa_ref),
       bibtex_ref_o  = .n(paper$bibtex_ref),
-      url_o         = .n(paper$url)
+      url_o         = .n(paper$url),
+      oa_url_o      = .n(paper$oa_url)
     )
 
     related <- c(paper$record$replications, paper$record$reproductions)
@@ -198,6 +201,7 @@ flora_json_to_df <- function(data) {
         apa_ref_r            = .n(entry$apa_ref),
         bibtex_ref_r         = .n(entry$bibtex_ref),
         url_r                = .n(entry$url),
+        oa_url_r             = .n(entry$oa_url),
         outcome              = .n(entry$outcome),
         outcome_quote        = .n(entry$outcome_quote),
         outcome_quote_source = .n(entry$outcome_quote_source)

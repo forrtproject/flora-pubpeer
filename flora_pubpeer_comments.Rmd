@@ -62,13 +62,15 @@ shorten_apa <- function(ref) {
 data <- csv_to_flora_json("flora.csv")
 df   <- flora_json_to_df(data)
 
+View(flora_json_to_df)
+
 # Fix encoding immediately after loading
 df <- df |>
   mutate(across(where(is.character), \(x) iconv(x, from = "latin1", to = "UTF-8", sub = " "))) |>
   mutate(across(where(is.character), \(x) str_replace_all(x, "[^\x01-\x7F]", "-"))) |>
+  mutate(across(where(is.character), \(x) str_replace_all(x, "-{2,}", "-"))) |>  # ← add this line
   mutate(across(where(is.character), \(x) str_replace_all(x, "\\s+", " "))) |>
   mutate(across(where(is.character), \(x) trimws(x)))
-
 
 
 # Create shortened APA reference
@@ -137,13 +139,20 @@ entries <- vapply(seq_len(n), function(i) {
             
             quote_source_line <- if (!is.na(r$outcome_quote_source)) paste0("\n> **Quote source:** \"",
                                                                               r$outcome_quote_source, "\"") else ""
-            paste0(
-              label,
-              "\n> ", r$apa_ref_r_sh, "\n",
+            
+            oa_link <- if (!is.na(r$oa_url_r) & nchar(trimws(r$oa_url_r)) > 0) {
+                        paste0(" [🔓](", r$oa_url_r, ")")
+                      } else {
+                        ""
+                      }
+                      
+                      paste0(
+                        label,
+                        "\n> ", r$apa_ref_r_sh, oa_link, "\n",
               "> \n",
               "> **The authors reported the replication as:** \"", r$outcome, "\"\n",
               "> \n",
-              "> _From the quote source:_ ", r$outcome_quote,
+              "> **Quote:** ", r$outcome_quote,
               quote_source_line
             )
           }, character(1))
