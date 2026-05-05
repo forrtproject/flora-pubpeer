@@ -17,7 +17,9 @@ data <- csv_to_flora_json("flora.csv")
 df   <- flora_json_to_df(data)
 head(df)
 summary(df)
-
+```
+# are there duplicates?
+```{r}
 check <- df %>%
   group_by(doi_o) %>%
   filter(n() > 1) %>% 
@@ -25,4 +27,14 @@ check <- df %>%
   ungroup
 
 View(check)
+
+
+write.csv(check, "check.csv")
+```
+# are there NAs in apa_ref_r
+```{r}
+narefs <- df %>% filter(is.na(apa_ref_r))
+View(narefs)
+
+print(narefs$doi_o)
 ```
