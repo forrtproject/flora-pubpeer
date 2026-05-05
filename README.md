@@ -27,7 +27,8 @@ signed comments can be made on research articles. We use this platform because i
 is the most transparent tool we have to link original and replication articles. </ul>
 
 #### How are the replication and reproduction articles found?
-<ul> RepNote uses the FLoRA database of replications and reproductions. 
+<ul> RepNote uses the FLoRA database of replications and reproductions.
+ 
 
 One part of FLoRA is made up of the FORRT Replication Database (FReD), which includes the work of hundreds of people over many years. The FORRT Replication Database is a crowdsourced effort, which aimed to gather unpublished and published replication results to estimate and track replicability in social sciences. Studies were manually found or submitted and then double-coded by humans. For more information and to explore the database, click [here](https://forrt-replications.shinyapps.io/fred_explorer/#).
 
