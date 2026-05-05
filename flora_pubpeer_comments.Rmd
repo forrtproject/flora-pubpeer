@@ -17,6 +17,45 @@ library(readr)
 source("flora_converter.R")
 ```
 
+# Shorten references length
+
+```{r}
+shorten_apa <- function(ref) {
+  if (is.na(ref) || nchar(trimws(ref)) == 0) return(ref)
+  
+  # Extract year
+  year_match <- regmatches(ref, regexpr("\\(\\d{4}\\)", ref))
+  if (length(year_match) == 0) return(ref)
+  year <- year_match[1]
+  
+  # Extract author string — everything before the year
+  author_str <- trimws(sub(year, "", ref, fixed = TRUE))
+  author_str <- trimws(sub(paste0(sub(year, "", ref, fixed = TRUE) |> 
+                                    strsplit(year, fixed = TRUE) |> 
+                                    unlist() |> tail(1)), "", author_str, fixed = TRUE))
+  author_str <- trimws(strsplit(ref, year, fixed = TRUE)[[1]][1])
+  
+  # Get first author family name
+  first_author_family <- trimws(strsplit(author_str, ",")[[1]][1])
+  
+  # Count commas to determine number of authors
+  comma_count <- lengths(regmatches(author_str, gregexpr(",", author_str)))
+  
+  # Build rest of reference from year onward
+  rest <- paste0(year, trimws(strsplit(ref, year, fixed = TRUE)[[1]][2]))
+  
+  if (comma_count >= 3) {
+    paste0(first_author_family, " et al. ", rest)
+  } else {
+    paste0(author_str, " ", rest)
+  }
+}
+
+
+```
+
+
+
 # load data convert
 ```{r}
 
@@ -30,6 +69,12 @@ df <- df |>
   mutate(across(where(is.character), \(x) str_replace_all(x, "\\s+", " "))) |>
   mutate(across(where(is.character), \(x) trimws(x)))
 
+
+
+# Create shortened APA reference
+df$apa_ref_r_sh <- sapply(df$apa_ref_r, shorten_apa)
+
+
 # Select 50 random rows
 rand_doi <- sample(df$doi_o, 200)
 df_rand50 <- df |> filter(doi_o %in% rand_doi)
@@ -37,6 +82,7 @@ df_rand50 <- df |> filter(doi_o %in% rand_doi)
 
 
 ```
+
 
 
 # process
@@ -51,6 +97,7 @@ generate_flora_messages <- function(df) {
 
   for (doi in unique(df$doi_o)) {
     rows <- df[df$doi_o == doi, ]
+    rows$apa_ref_r_sh <- sapply(rows$apa_ref_r, shorten_apa)
     n    <- nrow(rows)
 
       n_replications  <- sum(tolower(rows$type) == "replication", na.rm = TRUE)
@@ -71,22 +118,41 @@ generate_flora_messages <- function(df) {
         "**"
       )
 
-   entries <- vapply(seq_len(n), function(i) {
-      r <- rows[i, ]
-      quote_source_line <- if (!is.na(r$outcome_quote_source)) paste0("\n> **Quote source:** \"", 
-                                                                      r$outcome_quote_source, "\"") else ""
-      paste0(
-        "**Replication article reference:** ", r$apa_ref_r, "\n\n",
-        "**Outcome:** \"", r$outcome, "\"\n",
-        "\n> **Outcome quote:** ", r$outcome_quote,
-        quote_source_line
-      )
-    }, character(1))
+   rep_counter <- 0
+repro_counter <- 0
+
+entries <- vapply(seq_len(n), function(i) {
+            r <- rows[i, ]
+            
+            # Build the label
+            if (n == 1) {
+              label <- ""
+            } else if (tolower(r$type) == "replication") {
+              rep_counter <<- rep_counter + 1
+              label <- paste0("**Replication ", rep_counter, "**\n")
+            } else {
+              repro_counter <<- repro_counter + 1
+              label <- paste0("**Reproduction ", repro_counter, "**\n")
+            }
+            
+            quote_source_line <- if (!is.na(r$outcome_quote_source)) paste0("\n> **Quote source:** \"",
+                                                                              r$outcome_quote_source, "\"") else ""
+            paste0(
+              label,
+              "\n> ", r$apa_ref_r_sh, "\n",
+              "> \n",
+              "> **The authors reported the replication as:** \"", r$outcome, "\"\n",
+              "> \n",
+              "> _From the quote source:_ ", r$outcome_quote,
+              quote_source_line
+            )
+          }, character(1))
+   
+   
     
 
     footer <- paste0(
-      "Manual inspection may help to assess what led to the outcome described. Future research can learn from replications and build on them. More information about why and how we submitted this automated comment was submitted can be found at ",
-      "[https://github.com/forrtproject/flora-pubpeer/blob/main/README.md](https://github.com/forrtproject/flora-pubpeer/blob/main/README.md)\n\n",
+      "Manual inspection may help to assess what led to the outcome described. Future research can learn from replications and build on them. More information about why and how we submitted this automated comment was submitted can be found [here](https://github.com/forrtproject/flora-pubpeer/blob/main/README.md)\n\n",
       "FLoRA Notify Team"
     )
     messages[[doi]] <- paste(c(header, entries, footer), collapse = "\n\n\n")
