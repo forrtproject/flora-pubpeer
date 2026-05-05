@@ -66,6 +66,7 @@ Identify specific target study/studies that it replicates.
 Replicate a study or experiment, not just a single association or finding.
 * *Replications can range from close/direct (same methods, same population) to conceptual (testing the same hypothesis with different methods)*, as long as the above criteria are met. The plugin tags replication outcomes as Successful, Failed, or Mixed, based on how the replication authors characterise their results, usually in the abstract. 
 
+
 **Replication outcome coding relies on what replication authors say in the abstract. If this information was not available in the abstract, coders were directed to check the results section and supplementary materials.** If there is no abstract or summary, coders have to summarise themselves. As coders cannot know all topics in depth and weigh claims, we have to do it formally. That means, 9/10 successfully replicated claims would be coded as “mixed” since the one failed claim could be crucial for the overall conclusion. If nothing is in abstract, discussion, or conclusion, then the study is coded as "descriptive only". 
 
 Reproductions are attempts to computationally verify whether reported results can be obtained from the original study’s data and methods. Reproductions are coded along two dimensions:
