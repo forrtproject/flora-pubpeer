@@ -31,7 +31,7 @@ df <- df |>
   mutate(across(where(is.character), \(x) trimws(x)))
 
 # Select 50 random rows
-rand_doi <- sample(df$doi_o, 50)
+rand_doi <- sample(df$doi_o, 200)
 df_rand50 <- df |> filter(doi_o %in% rand_doi)
 
 
@@ -53,17 +53,34 @@ generate_flora_messages <- function(df) {
     rows <- df[df$doi_o == doi, ]
     n    <- nrow(rows)
 
-    header <- paste0(
-      "According to data from the FORRT Library of Reproduction and Replication Attempts (FLoRA) ",
-      if (n == 1) "there is 1 replication attempt" else paste0("there are ", n, " replication attempts"),
-      " of a finding from this study. ",
-      "Future research may learn from replications and build on them. ",
-      "Manual inspection of these articles may help to assess what led to the described outcome."
-    )
+      n_replications  <- sum(tolower(rows$type) == "replication", na.rm = TRUE)
+      n_reproductions <- sum(tolower(rows$type) == "reproduction", na.rm = TRUE)
+      
+      attempt_text <- if (n_reproductions == 0) {
+        if (n_replications == 1) "there is 1 replication attempt" else paste0("there are ", 
+                                                                              n_replications, " replication attempts")
+      } else if (n_replications == 0) {
+        if (n_reproductions == 1) "there is 1 reproduction attempt" else paste0("there are ", 
+                                                                            n_reproductions, " reproduction attempts")
+      } else {
+        paste0("there are ", n_replications,
+               if (n_replications == 1) " replication attempt" else " replication attempts",
+               " and ", n_reproductions,
+               if (n_reproductions == 1) " reproduction attempt" else " reproduction attempts")
+      }
+      
+      header <- paste0(
+        "According to data from the FORRT Library of Reproduction and Replication Attempts (FLoRA), ",
+        attempt_text,
+        " of a finding from this study. ",
+        "Future research may learn from replications and build on them. ",
+        "Manual inspection of these articles may help to assess what led to the described outcome."
+      )
 
     entries <- vapply(seq_len(n), function(i) {
       r <- rows[i, ]
-      quote_source_line <- if (!is.na(r$outcome_quote_source)) paste0("\nQuote source: \"", r$outcome_quote_source, "\"") else ""
+      quote_source_line <- if (!is.na(r$outcome_quote_source)) paste0("\nQuote source: \"", 
+                                                                      r$outcome_quote_source, "\"") else ""
       paste0(
         "Replication article reference: ", r$apa_ref_r, "\n",
         "Outcome: \"", r$outcome, "\"\n",
@@ -86,13 +103,9 @@ generate_flora_messages <- function(df) {
 }
 ```
 
-```{r}
-dfrand50 %>% filter(doi_o=="10.1016/j.obhdp.2006.10.001")
-```
-
 # create message
 ```{r}
-msgs <- generate_flora_messages(dfrand50)
+msgs <- generate_flora_messages(df_rand50)
 msgs_df <- data.frame(
   doi_o   = names(msgs),
   message = unlist(msgs),
