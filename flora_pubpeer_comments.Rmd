@@ -56,52 +56,46 @@ generate_flora_messages <- function(df) {
       n_replications  <- sum(tolower(rows$type) == "replication", na.rm = TRUE)
       n_reproductions <- sum(tolower(rows$type) == "reproduction", na.rm = TRUE)
       
-      attempt_text <- if (n_reproductions == 0) {
-        if (n_replications == 1) "there is 1 replication attempt" else paste0("there are ", 
-                                                                              n_replications, " replication attempts")
-      } else if (n_replications == 0) {
-        if (n_reproductions == 1) "there is 1 reproduction attempt" else paste0("there are ", 
-                                                                            n_reproductions, " reproduction attempts")
-      } else {
-        paste0("there are ", n_replications,
-               if (n_replications == 1) " replication attempt" else " replication attempts",
-               " and ", n_reproductions,
-               if (n_reproductions == 1) " reproduction attempt" else " reproduction attempts")
-      }
+
+      attempt_parts <- c(
+        if (n_replications > 0) paste0(n_replications, " replication attempt", if (n_replications != 1) "s" else ""),
+        if (n_reproductions > 0) paste0(n_reproductions, " reproduction attempt", if (n_reproductions != 1) "s" else "")
+      )
       
       header <- paste0(
-        "According to data from the FORRT Library of Reproduction and Replication Attempts (FLoRA), ",
-        attempt_text,
-        " of a finding from this study. ",
-        "Future research may learn from replications and build on them. ",
-        "Manual inspection of these articles may help to assess what led to the described outcome."
+        "**",
+        paste(attempt_parts, collapse = " and "),
+        " of this paper ",
+        if ((n_replications + n_reproductions) != 1) "have" else "has",
+        " been recorded in the FORRT Library of Reproduction and Replication Attempts (FLoRA).",
+        "**"
       )
 
    entries <- vapply(seq_len(n), function(i) {
       r <- rows[i, ]
-      quote_source_line <- if (!is.na(r$outcome_quote_source)) paste0("\n**Quote source:** \"", 
+      quote_source_line <- if (!is.na(r$outcome_quote_source)) paste0("\n> **Quote source:** \"", 
                                                                       r$outcome_quote_source, "\"") else ""
       paste0(
-        "**Replication article reference:** ", r$apa_ref_r, "\n",
+        "**Replication article reference:** ", r$apa_ref_r, "\n\n",
         "**Outcome:** \"", r$outcome, "\"\n",
-        "**Outcome quote:** ", r$outcome_quote,
+        "\n> **Outcome quote:** ", r$outcome_quote,
         quote_source_line
       )
     }, character(1))
     
 
     footer <- paste0(
-      "FLoRA database is available online:   [https://dx.doi.org/10.17605/OSF.IO/9r62x](https://dx.doi.org/10.17605/OSF.IO/9r62x)\n",
-      "We describe why and how we submitted these automated comments here: ",
+      "Manual inspection may help to assess what led to the outcome described. Future research can learn from replications and build on them. More information about why and how we submitted this automated comment was submitted can be found at ",
       "[https://github.com/forrtproject/flora-pubpeer/blob/main/README.md](https://github.com/forrtproject/flora-pubpeer/blob/main/README.md)\n\n",
       "FLoRA Notify Team"
     )
-
-    messages[[doi]] <- paste(c(header, entries, footer), collapse = "\n\n")
+    messages[[doi]] <- paste(c(header, entries, footer), collapse = "\n\n\n")
   }
 
   messages
 }
+
+
 ```
 
 # create message

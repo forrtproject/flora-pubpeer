@@ -400,48 +400,40 @@ should include all in message.</li>
       n_replications  &lt;- sum(tolower(rows$type) == &quot;replication&quot;, na.rm = TRUE)
       n_reproductions &lt;- sum(tolower(rows$type) == &quot;reproduction&quot;, na.rm = TRUE)
       
-      attempt_text &lt;- if (n_reproductions == 0) {
-        if (n_replications == 1) &quot;there is 1 replication attempt&quot; else paste0(&quot;there are &quot;, 
-                                                                              n_replications, &quot; replication attempts&quot;)
-      } else if (n_replications == 0) {
-        if (n_reproductions == 1) &quot;there is 1 reproduction attempt&quot; else paste0(&quot;there are &quot;, 
-                                                                            n_reproductions, &quot; reproduction attempts&quot;)
-      } else {
-        paste0(&quot;there are &quot;, n_replications,
-               if (n_replications == 1) &quot; replication attempt&quot; else &quot; replication attempts&quot;,
-               &quot; and &quot;, n_reproductions,
-               if (n_reproductions == 1) &quot; reproduction attempt&quot; else &quot; reproduction attempts&quot;)
-      }
+
+      attempt_parts &lt;- c(
+        if (n_replications &gt; 0) paste0(n_replications, &quot; replication attempt&quot;, if (n_replications != 1) &quot;s&quot; else &quot;&quot;),
+        if (n_reproductions &gt; 0) paste0(n_reproductions, &quot; reproduction attempt&quot;, if (n_reproductions != 1) &quot;s&quot; else &quot;&quot;)
+      )
       
       header &lt;- paste0(
-        &quot;According to data from the FORRT Library of Reproduction and Replication Attempts (FLoRA), &quot;,
-        attempt_text,
-        &quot; of a finding from this study. &quot;,
-        &quot;Future research may learn from replications and build on them. &quot;,
-        &quot;Manual inspection of these articles may help to assess what led to the described outcome.&quot;
+        &quot;**&quot;,
+        paste(attempt_parts, collapse = &quot; and &quot;),
+        &quot; of this paper &quot;,
+        if ((n_replications + n_reproductions) != 1) &quot;have&quot; else &quot;has&quot;,
+        &quot; been recorded in the FORRT Library of Reproduction and Replication Attempts (FLoRA).&quot;,
+        &quot;**&quot;
       )
 
    entries &lt;- vapply(seq_len(n), function(i) {
       r &lt;- rows[i, ]
-      quote_source_line &lt;- if (!is.na(r$outcome_quote_source)) paste0(&quot;\n**Quote source:** \&quot;&quot;, 
+      quote_source_line &lt;- if (!is.na(r$outcome_quote_source)) paste0(&quot;\n&gt; **Quote source:** \&quot;&quot;, 
                                                                       r$outcome_quote_source, &quot;\&quot;&quot;) else &quot;&quot;
       paste0(
-        &quot;**Replication article reference:** &quot;, r$apa_ref_r, &quot;\n&quot;,
+        &quot;**Replication article reference:** &quot;, r$apa_ref_r, &quot;\n\n&quot;,
         &quot;**Outcome:** \&quot;&quot;, r$outcome, &quot;\&quot;\n&quot;,
-        &quot;**Outcome quote:** &quot;, r$outcome_quote,
+        &quot;\n&gt; **Outcome quote:** &quot;, r$outcome_quote,
         quote_source_line
       )
     }, character(1))
     
 
     footer &lt;- paste0(
-      &quot;FLoRA database is available online:   [https://dx.doi.org/10.17605/OSF.IO/9r62x](https://dx.doi.org/10.17605/OSF.IO/9r62x)\n&quot;,
-      &quot;We describe why and how we submitted these automated comments here: &quot;,
+      &quot;Manual inspection may help to assess what led to the outcome described. Future research can learn from replications and build on them. More information about why and how we submitted this automated comment was submitted can be found at &quot;,
       &quot;[https://github.com/forrtproject/flora-pubpeer/blob/main/README.md](https://github.com/forrtproject/flora-pubpeer/blob/main/README.md)\n\n&quot;,
       &quot;FLoRA Notify Team&quot;
     )
-
-    messages[[doi]] &lt;- paste(c(header, entries, footer), collapse = &quot;\n\n&quot;)
+    messages[[doi]] &lt;- paste(c(header, entries, footer), collapse = &quot;\n\n\n&quot;)
   }
 
   messages
