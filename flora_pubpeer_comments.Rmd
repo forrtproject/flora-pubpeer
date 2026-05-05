@@ -62,7 +62,7 @@ shorten_apa <- function(ref) {
 data <- csv_to_flora_json("flora.csv")
 df   <- flora_json_to_df(data)
 
-View(flora_json_to_df)
+
 
 # Fix encoding immediately after loading
 df <- df |>
@@ -175,6 +175,9 @@ entries <- vapply(seq_len(n), function(i) {
 
 # create message
 ```{r}
+
+msgs <- generate_flora_messages(df_rand50)
+
 msgs_df <- data.frame(
   doi_o   = names(msgs),
   message = unlist(msgs),
@@ -186,9 +189,6 @@ msgs_df <- data.frame(
     message = str_replace_all(message, "[^\x01-\x7F]", "-"),
     message = str_replace_all(message, "-{2,}", "-")
   )
-
-
-
 
 msgs_df %>% filter(doi_o=="10.1016/j.obhdp.2006.10.001")
 readr::write_csv(msgs_df, "msgs.csv")
