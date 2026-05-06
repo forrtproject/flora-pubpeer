@@ -353,8 +353,8 @@ display: none;
 </div>
 
 
-<div id="load-converter" class="section level2">
-<h2>Load Converter</h2>
+<div id="load-converter" class="section level3">
+<h3>Load Converter</h3>
 <pre class="r"><code>source(&quot;flora_converter.R&quot;)</code></pre>
 <pre><code>## Warning: package &#39;jsonlite&#39; was built under R version 4.5.3</code></pre>
 <pre><code>## 
@@ -363,8 +363,8 @@ display: none;
 ## 
 ##     flatten</code></pre>
 </div>
-<div id="functions-to-shorten-lengthy-references" class="section level2">
-<h2>Functions to shorten lengthy references</h2>
+<div id="functions-to-shorten-lengthy-references" class="section level3">
+<h3>Functions to shorten lengthy references</h3>
 <pre class="r"><code>shorten_apa &lt;- function(ref) {
   if (is.na(ref) || nchar(trimws(ref)) == 0) {
     return(ref)
@@ -393,17 +393,43 @@ display: none;
 <h2>Load And Clean Data</h2>
 <pre class="r"><code>data &lt;- csv_to_flora_json(&quot;flora.csv&quot;)
 df &lt;- flora_json_to_df(data)
+# remove outcomes that are termed uninformative or unclear
+df &lt;- df %&gt;% filter(outcome!= &quot;unclear&quot;) %&gt;% filter(outcome != &quot;uninformative&quot;)
+df &lt;- df %&gt;% filter(!(is.na(apa_ref_r)))
 
+#remove source that is not in main article
+df &lt;- df %&gt;%
+  filter(!stringr::str_detect(outcome_quote_source, 
+    regex(&quot;supplementary material|supplementary|supplemental|materials|github|\\bSM\\b|table|appendix&quot;,
+          ignore_case = TRUE)))
 df &lt;- df |&gt;
     mutate(across(where(is.character), str_squish))
 
 df$apa_ref_r_sh &lt;- sapply(df$apa_ref_r, shorten_apa)
 
-rand_doi &lt;- sample(df$doi_o, 2156)
+rand_doi &lt;- sample(df$doi_o, 300)
 df_rand50 &lt;- df |&gt;   filter(doi_o %in% rand_doi)</code></pre>
+<div id="match-the-doi-of-the-replication-reference-with-the-open-access-doi." class="section level3">
+<h3>Match the DOI of the replication reference with the open-access
+DOI.</h3>
+<pre class="r"><code>extract_doi_id &lt;- function(url) {
+  if (is.na(url) || nchar(trimws(url)) == 0) return(NA)
+  m &lt;- regmatches(url, regexpr(&quot;(?i)10\\.\\d{4,}[/\\S]+&quot;, url, perl = TRUE))
+  if (length(m) == 0) return(NA)
+  tolower(trimws(gsub(&quot;[[:punct:]]+$&quot;, &quot;&quot;, m)))
+}
+
+df_rand50 &lt;- df_rand50 |&gt;
+  mutate(oa_url_r_matched = ifelse(
+    !is.na(oa_url_r) &amp;
+    !is.na(doi_r) &amp;
+    map_chr(oa_url_r, extract_doi_id) == tolower(trimws(doi_r)),
+    NA_character_,
+    oa_url_r
+  ))</code></pre>
 </div>
-<div id="generate-pubpeer-messages" class="section level2">
-<h2>Generate PubPeer Messages</h2>
+<div id="generate-pubpeer-messages" class="section level3">
+<h3>Generate PubPeer Messages</h3>
 <p>The message generation workflow:</p>
 <ol style="list-style-type: decimal">
 <li>Convert JSON back to a data frame.</li>
@@ -475,28 +501,11 @@ message.</li>
         &quot;&quot;
       }
 
-      extract_doi_id &lt;- function(url) {
-        if (is.na(url) || nchar(trimws(url)) == 0) return(NA)
-        m &lt;- regmatches(url, regexpr(&quot;(?i)10\\.\\d{4,}[/\\S]+&quot;, url, perl = TRUE))
-        if (length(m) == 0) return(NA)
-        tolower(trimws(gsub(&quot;[[:punct:]]+$&quot;, &quot;&quot;, m)))
-      }
-
-      doi_from_ref &lt;- extract_doi_id(r$apa_ref_r)
-      doi_from_oa  &lt;- extract_doi_id(r$oa_url_r)
-
-      oa_link &lt;- if (
-        !is.na(r$oa_url_r) &amp;&amp;
-        nchar(trimws(r$oa_url_r)) &gt; 0 &amp;&amp;
-        (is.na(doi_from_ref) || is.na(doi_from_oa) || !identical(doi_from_ref, doi_from_oa))
-      ) {
-        paste0(&quot; \U0001F513 [Open Access](&quot;, r$oa_url_r, &quot;)&quot;)
+      oa_link &lt;- if (!is.na(r$oa_url_r_matched) &amp;&amp; nchar(trimws(r$oa_url_r_matched)) &gt; 0) {
+        paste0(&quot; [Open Access](&quot;, r$oa_url_r_matched, &quot;)&quot;)
       } else {
         &quot;&quot;
       }
-      
-      
-      
 
       paste0(
         label,
@@ -522,20 +531,22 @@ message.</li>
   messages
 }</code></pre>
 </div>
-<div id="create-message-csv" class="section level2">
-<h2>Create Message CSV</h2>
+<div id="create-message-csv" class="section level3">
+<h3>Create Message CSV</h3>
 <pre class="r"><code>msgs &lt;- generate_flora_messages(df_rand50)
 
 msgs_df &lt;- data.frame(
   doi_o = names(msgs),
   message = unlist(msgs),
   row.names = NULL,
-  stringsAsFactors = FALSE) |&gt;
+  stringsAsFactors = FALSE
+) |&gt;
   mutate(
-    message = str_squish(message)
+    message = str_replace_all(message, &quot;\\[Open Access\\]&quot;, &quot;\U0001F513 [Open Access]&quot;)
   )
 
 readr::write_csv(msgs_df, &quot;msgs.csv&quot;)</code></pre>
+</div>
 </div>
 
 
