@@ -49,7 +49,15 @@ shorten_apa <- function(ref) {
 ```{r load-clean-data}
 data <- csv_to_flora_json("flora.csv")
 df <- flora_json_to_df(data)
+# remove outcomes that are termed uninformative or unclear
+df <- df %>% filter(outcome!= "unclear") %>% filter(outcome != "uninformative")
+df <- df %>% filter(!(is.na(apa_ref_r)))
 
+#remove source that is not in main article
+df <- df %>%
+  filter(!stringr::str_detect(outcome_quote_source, 
+    regex("supplementary material|supplementary|supplemental|materials|github|\\bSM\\b|table|appendix",
+          ignore_case = TRUE)))
 df <- df |>
     mutate(across(where(is.character), str_squish))
 
