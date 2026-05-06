@@ -47,7 +47,7 @@ Additional studies are included in FLoRA that are not in the FORRT Replication D
 </details>
 
 <details>
-<summary>Which replications and reproductions does RepNote detect?</summary>
+<summary>Which replications and reproductions does RepNote detect?<br></summary>
 
 <br>We consider an article to be a replication if it has been termed as such by the authors and includes a test of prior claim using (at least partially) new data. Replication articles were collated partly by hand and partly in an automated way, by the FORRT extraction team. 
 
