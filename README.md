@@ -1,4 +1,4 @@
-# Pubpeer comments on replications
+# Pubpeer Comments on Replications and Reproductions
 
 ## Aim
 RepNote is the PubPeer integration of the FORRT Library of Replication Attempts (FLoRA). It is a proactive method to make researchers aware of replications of their own and others' research. For original studies for which there is a replication attempt in FLoRA, a publicly visible comment is posted on PubPeer.
