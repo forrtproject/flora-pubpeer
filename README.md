@@ -27,36 +27,33 @@ Replications are a prerequisite for a robust research claim, and if these attemp
 </details>
 
 <details>
-<summary>Why did you email me about my article?</summary>
-<br>We emailed 100 original study authors before making the first round of comments to 
-gather responses to the tool before it was widely implemented.<br><br>
-</details>
-
-<details>
 <summary>Why use PubPeer?</summary>
 <br>PubPeer is a public platform, accessible without barriers, where anonymous and
 signed comments can be made on research articles. We use this platform because it
-is the most transparent tool we have to link original and replication articles.<br><br> 
+is the most transparent tool we have to link original and replication articles. There is
+no current infrastructure that links original articles to their replication, as citations on
+articles can only point backwards to previously completed work.<br><br> 
+
 </details>
 
 <details>
 <summary>How are the replication and reproduction articles found?</summary>
 
-<br>RepNote uses the FLoRA database of replications and reproductions.<br>
+<br>RepNote uses the FORRT Library of Reproduction and Replication Attempts.<br>
 
 One part of FLoRA is made up of the FORRT Replication Database (FReD), which includes the work of hundreds of people over many years. The FORRT Replication Database is a crowdsourced effort, which aimed to gather unpublished and published replication results to estimate and track replicability in social sciences. Studies were manually found or submitted and then double-coded by humans. For more information and to explore the database, click [here](https://forrt-replications.shinyapps.io/fred_explorer/#).
 
-Additional studies are included in FLoRA that are not in the FORRT Replication Database. A systematic search of OpenAlex has been conducted, using the keyword “replication” with automated extraction with R code and manual validation by a human of extracted variables. This is continuing over time. The code used for automatic extraction can be found [here].<br><br> 
+Additional studies are included in FLoRA that are not in the FORRT Replication Database. A systematic search of OpenAlex has been conducted, using the keyword “replication” with automated extraction with R code and manual validation by a human of extracted variables. This is continuing over time. Reproductions are taken from the [Replication Network list](https://replicationnetwork.com/), and from the [Institute for Replication reports](https://i4replication.org/reports/?cpt=replication-report).<br><br> 
 </details>
 
 <details>
 <summary>Which replications and reproductions does RepNote detect?</summary>
 
-We consider an article to be a replication if it has been termed as such by the authors and includes a test of prior claim using (at least partially) new data. Replication articles were collated partly by hand and partly in an automated way, by the FORRT extraction team. 
+<br>We consider an article to be a replication if it has been termed as such by the authors and includes a test of prior claim using (at least partially) new data. Replication articles were collated partly by hand and partly in an automated way, by the FORRT extraction team. 
 
 Replication results are coded from the text of replication articles,
 found either by submission (the FORRT Replication Database data) or by
-systematic searching of OpenAlex for the term “replication”. Reproductions are taken from Replication Network list, and from the Institute for Replication reports.
+systematic searching of OpenAlex for the term “replication”. Reproductions are taken from [Replication Network list](https://replicationnetwork.com/), and from the [Institute for Replication reports](https://i4replication.org/reports/?cpt=replication-report).<br><br>
 </details>
 
 <details>
@@ -78,8 +75,8 @@ For more information on the dataset, see the about the dataset section. For more
 <details>
 <summary>Do you maintain a copy of analysed papers or results?</summary>
 
-<br>The FORRT Replication Database (FReD) database is openly available [here](https://forrt-replications.shinyapps.io/fred_explorer/#).  
-The FLoRA dataset is not openly available, but is maintained by the FORRT team.<br><br>
+<br>The FORRT Replication Database database (FReD)is openly available [here](https://forrt-replications.shinyapps.io/fred_explorer/#).  
+The FORRT Library of Reproduction and Replication Attempts (FLoRA) is openly available [here](https://forrt.org/flora-explorer/), where we will offer a download soon.<br><br>
 
 </details>
 
@@ -107,7 +104,7 @@ Replications are studies that intentionally repeat prior research to test whethe
 * *Self-identify as a replication* (e.g., “replication of Author (Year)”) before reporting results — replication must be an aim, not just a result. Identify specific target study/studies that it replicates. Replicate a study or experiment, not just a single association or finding.
 * *Replications can range from close/direct (same methods, same population) to conceptual (testing the same hypothesis with different methods)*, as long as the above criteria are met. The plugin tags replication outcomes as Successful, Failed, or Mixed, based on how the replication authors characterise their results, usually in the abstract. 
 
-**Replication outcome coding relies on what replication authors say in the abstract. If this information was not available in the abstract, coders were directed to check the results section and supplementary materials.** If there is no abstract or summary, coders have to summarise themselves. As coders cannot know all topics in depth and weigh claims, we have to do it formally. That means, 9/10 successfully replicated claims would be coded as “mixed” since the one failed claim could be crucial for the overall conclusion. If nothing is in abstract, discussion, or conclusion, then the study is coded as "descriptive only".
+**Replication outcome coding relies on what replication authors say in the abstract. If this information was not available in the abstract, coders were directed to check the results section and supplementary materials.** If there is no abstract or summary, coders have to summarise themselves. As coders cannot know all topics in depth and weigh claims, we have to do it formally. That means, 9/10 successfully replicated claims would be coded as “mixed” since the one failed claim could be crucial for the overall conclusion. If nothing is in abstract, discussion, or conclusion, then the study is coded as "descriptive only", indicating that the study explicitly did not aim to test the veracity of the original claim. This is very rare, and applies to e.g. qualitative replications, repeated reviews or a study that "replicated" an analysis of the composition of 911 calls in a different place and time. 
 
 Reproductions are attempts to computationally verify whether reported results can be obtained from the original study’s data and methods. Reproductions are coded along two dimensions:
 
@@ -116,7 +113,7 @@ Robustness: Do results hold under reasonable alternative specifications? (Robust
 * *Key distinction:* **If new data are collected or used (e.g., an additional decade of data), it is a replication. If the same data are re-analysed to verify the original results, it is a reproduction.**
 
 ## Team (alphabetically)
-Prasad Chandrashekar, Ze Freeman, Lukas Wallrich, and Josefina Weinerova created the tool. RepNote is maintained by the FORRT community and collaborators, including Lukas Röseler, Lukas Wallrich, and Josefina Weinerova.
+Prasad Chandrashekar, Ze Freeman, Lukas Wallrich, and Josefina Weinerova created the tool. RepNote is maintained by the FORRT community and collaborators, including Lukas Röseler, Lukas Wallrich, and Josefina Weinerova. The full list of contributors to FReD can be found [here](https://forrt.org/contributors/?project=fred-forrt-replication-database&collapse-filter) and FLoRA can be found [here](https://forrt.org/contributors/?project=flora-forrt-library-of-replication-attempts).
 
 ## Contact
 Please contact the RepNote Team on [this Google form](https://docs.google.com/forms/d/e/1FAIpQLSc3Qinv4xwp01JT3P9_6wyz4Hd5bqBYJr6RcvyMvWrP5hScZQ/viewform?usp=dialog).
