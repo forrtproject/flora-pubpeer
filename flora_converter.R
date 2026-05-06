@@ -44,8 +44,9 @@ library(jsonlite)
 #' }
 csv_to_flora_json <- function(source) {
   if (is.character(source)) {
-    df <- read.csv(source, fileEncoding = "UTF-8-BOM", stringsAsFactors = FALSE,
+    df <- read.csv(source, encoding = "UTF-8-BOM", stringsAsFactors = FALSE,
                    na.strings = c("NA", ""))
+    
   } else if (is.data.frame(source)) {
     df <- source
   } else {

@@ -51,22 +51,15 @@ data <- csv_to_flora_json("flora.csv")
 df <- flora_json_to_df(data)
 
 df <- df |>
-  mutate(
-    across(
-      where(is.character),
-      \(x) iconv(x, from = "latin1", to = "UTF-8", sub = " ")
-    )
-  ) |>
-  mutate(across(where(is.character), \(x) str_replace_all(x, "[^\x01-\x7F]", "-"))) |>
-  mutate(across(where(is.character), \(x) str_replace_all(x, "-{2,}", "-"))) |>
-  mutate(across(where(is.character), \(x) str_replace_all(x, "\\s+", " "))) |>
-  mutate(across(where(is.character), \(x) trimws(x)))
+    mutate(across(where(is.character), str_squish))
 
 df$apa_ref_r_sh <- sapply(df$apa_ref_r, shorten_apa)
 
-rand_doi <- sample(df$doi_o, 200)
-df_rand50 <- df |>
-  filter(doi_o %in% rand_doi)
+rand_doi <- sample(df$doi_o, 300)
+df_rand50 <- df |>   filter(doi_o %in% rand_doi)
+
+
+
 ```
 
 ## Generate PubPeer Messages
@@ -134,7 +127,7 @@ generate_flora_messages <- function(df) {
       }
 
       quote_source_line <- if (!is.na(r$outcome_quote_source)) {
-        paste0("\n> **Quote source:** \"", r$outcome_quote_source, "\"")
+        paste0("\n> **Quote source:** ", r$outcome_quote_source)
       } else {
         ""
       }
@@ -149,19 +142,18 @@ generate_flora_messages <- function(df) {
         label,
         "\n> ", r$apa_ref_r_sh, oa_link, "\n",
         "> \n",
-        "> **The authors reported the replication as:** \"", r$outcome, "\"\n",
-        "> \n",
+        "> **The authors reported the replication as:** ", r$outcome, "\n",
         "> **Quote:** ", r$outcome_quote,
         quote_source_line
       )
     }, character(1))
 
     footer <- paste0(
-      "Manual inspection may help to assess what led to the outcome described. ",
+      "Manual inspection may help to assess what led to the described outcome. ",
       "Future research can learn from replications and build on them. More ",
       "information about why and how we submitted this automated comment can be ",
       "found [here](https://github.com/forrtproject/flora-pubpeer/blob/main/README.md)\n\n",
-      "FLoRA Notify Team"
+      "RepNote Team"
     )
 
     messages[[doi]] <- paste(c(header, entries, footer), collapse = "\n\n\n")
@@ -183,14 +175,10 @@ msgs_df <- data.frame(
   stringsAsFactors = FALSE
 ) |>
   mutate(
-    message = iconv(message, from = "UTF-8", to = "UTF-8", sub = " "),
-    message = str_replace_all(message, "[^\x01-\x7F]", "-"),
-    message = str_replace_all(message, "-{2,}", "-"),
     message = str_replace_all(message, "\\[Open Access\\]", "\U0001F513 [Open Access]")
   )
 
-msgs_df |>
-  filter(doi_o == "10.1016/j.obhdp.2006.10.001")
-
 readr::write_csv(msgs_df, "msgs.csv")
+
+
 ```
