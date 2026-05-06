@@ -1,5 +1,5 @@
 ---
-title: "FLORA Converter — Notebook Test"
+title: "FLORA Converter - PubPeer Comments"
 output: html_document
 ---
 
@@ -8,178 +8,176 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
 library(readr)
-
 ```
 
-## Load the converter
+## Load Converter
 
-```{r}
+```{r load-converter}
 source("flora_converter.R")
 ```
 
-# Shorten references length
+## Helper Functions
 
-```{r}
+```{r helper-functions}
 shorten_apa <- function(ref) {
-  if (is.na(ref) || nchar(trimws(ref)) == 0) return(ref)
-  
-  # Extract year
+  if (is.na(ref) || nchar(trimws(ref)) == 0) {
+    return(ref)
+  }
+
   year_match <- regmatches(ref, regexpr("\\(\\d{4}\\)", ref))
-  if (length(year_match) == 0) return(ref)
+  if (length(year_match) == 0) {
+    return(ref)
+  }
+
   year <- year_match[1]
-  
-  # Extract author string — everything before the year
-  author_str <- trimws(sub(year, "", ref, fixed = TRUE))
-  author_str <- trimws(sub(paste0(sub(year, "", ref, fixed = TRUE) |> 
-                                    strsplit(year, fixed = TRUE) |> 
-                                    unlist() |> tail(1)), "", author_str, fixed = TRUE))
+
   author_str <- trimws(strsplit(ref, year, fixed = TRUE)[[1]][1])
-  
-  # Get first author family name
   first_author_family <- trimws(strsplit(author_str, ",")[[1]][1])
-  
-  # Count commas to determine number of authors
   comma_count <- lengths(regmatches(author_str, gregexpr(",", author_str)))
-  
-  # Build rest of reference from year onward
   rest <- paste0(year, trimws(strsplit(ref, year, fixed = TRUE)[[1]][2]))
-  
+
   if (comma_count >= 3) {
     paste0(first_author_family, " et al. ", rest)
   } else {
     paste0(author_str, " ", rest)
   }
 }
-
-
 ```
 
+## Load And Clean Data
 
-
-# load data convert
-```{r}
-
+```{r load-clean-data}
 data <- csv_to_flora_json("flora.csv")
-df   <- flora_json_to_df(data)
+df <- flora_json_to_df(data)
 
-
-
-# Fix encoding immediately after loading
 df <- df |>
-  mutate(across(where(is.character), \(x) iconv(x, from = "latin1", to = "UTF-8", sub = " "))) |>
+  mutate(
+    across(
+      where(is.character),
+      \(x) iconv(x, from = "latin1", to = "UTF-8", sub = " ")
+    )
+  ) |>
   mutate(across(where(is.character), \(x) str_replace_all(x, "[^\x01-\x7F]", "-"))) |>
-  mutate(across(where(is.character), \(x) str_replace_all(x, "-{2,}", "-"))) |>  # ← add this line
+  mutate(across(where(is.character), \(x) str_replace_all(x, "-{2,}", "-"))) |>
   mutate(across(where(is.character), \(x) str_replace_all(x, "\\s+", " "))) |>
   mutate(across(where(is.character), \(x) trimws(x)))
 
-
-# Create shortened APA reference
 df$apa_ref_r_sh <- sapply(df$apa_ref_r, shorten_apa)
 
-
-# Select 50 random rows
 rand_doi <- sample(df$doi_o, 200)
-df_rand50 <- df |> filter(doi_o %in% rand_doi)
-
-
-
+df_rand50 <- df |>
+  filter(doi_o %in% rand_doi)
 ```
 
+## Generate PubPeer Messages
 
+The message generation workflow:
 
-# process
-1. convert json back to data frame
-2. clean up so that only non na doi_o and value in either doi_r or url_r
-3. new csv file for output
-4. for each unique doi_o generate row with reference, outcome, outcome quote and outcome source columns, column with message. If multiple doi_r should include all in message.
+1. Convert JSON back to a data frame.
+2. Keep records with a non-missing `doi_o` and a value in either `doi_r` or `url_r`.
+3. Create a CSV file for output.
+4. Generate one row per unique `doi_o`, including the reference, outcome, quote, quote source, and message. If there are multiple `doi_r` values, include all of them in the message.
 
-```{r}
+```{r generate-messages-function}
 generate_flora_messages <- function(df) {
   messages <- list()
 
   for (doi in unique(df$doi_o)) {
     rows <- df[df$doi_o == doi, ]
     rows$apa_ref_r_sh <- sapply(rows$apa_ref_r, shorten_apa)
-    n    <- nrow(rows)
+    n <- nrow(rows)
 
-      n_replications  <- sum(tolower(rows$type) == "replication", na.rm = TRUE)
-      n_reproductions <- sum(tolower(rows$type) == "reproduction", na.rm = TRUE)
-      
+    n_replications <- sum(tolower(rows$type) == "replication", na.rm = TRUE)
+    n_reproductions <- sum(tolower(rows$type) == "reproduction", na.rm = TRUE)
 
-      attempt_parts <- c(
-        if (n_replications > 0) paste0(n_replications, " replication attempt", if (n_replications != 1) "s" else ""),
-        if (n_reproductions > 0) paste0(n_reproductions, " reproduction attempt", if (n_reproductions != 1) "s" else "")
+    attempt_parts <- c(
+      if (n_replications > 0) {
+        paste0(
+          n_replications,
+          " replication attempt",
+          if (n_replications != 1) "s" else ""
+        )
+      },
+      if (n_reproductions > 0) {
+        paste0(
+          n_reproductions,
+          " reproduction attempt",
+          if (n_reproductions != 1) "s" else ""
+        )
+      }
+    )
+
+    header <- paste0(
+      "**",
+      paste(attempt_parts, collapse = " and "),
+      " of this paper ",
+      if ((n_replications + n_reproductions) != 1) "have" else "has",
+      " been recorded in the FORRT Library of Reproduction and ",
+      "Replication Attempts (FLoRA).",
+      "**"
+    )
+
+    rep_counter <- 0
+    repro_counter <- 0
+
+    entries <- vapply(seq_len(n), function(i) {
+      r <- rows[i, ]
+
+      if (n == 1) {
+        label <- ""
+      } else if (tolower(r$type) == "replication") {
+        rep_counter <<- rep_counter + 1
+        label <- paste0("**Replication ", rep_counter, "**\n")
+      } else {
+        repro_counter <<- repro_counter + 1
+        label <- paste0("**Reproduction ", repro_counter, "**\n")
+      }
+
+      quote_source_line <- if (!is.na(r$outcome_quote_source)) {
+        paste0("\n> **Quote source:** \"", r$outcome_quote_source, "\"")
+      } else {
+        ""
+      }
+
+      oa_link <- if (!is.na(r$oa_url_r) && nchar(trimws(r$oa_url_r)) > 0) {
+        paste0(" [Open Access](", r$oa_url_r, ")")
+      } else {
+        ""
+      }
+
+      paste0(
+        label,
+        "\n> ", r$apa_ref_r_sh, oa_link, "\n",
+        "> \n",
+        "> **The authors reported the replication as:** \"", r$outcome, "\"\n",
+        "> \n",
+        "> **Quote:** ", r$outcome_quote,
+        quote_source_line
       )
-      
-      header <- paste0(
-        "**",
-        paste(attempt_parts, collapse = " and "),
-        " of this paper ",
-        if ((n_replications + n_reproductions) != 1) "have" else "has",
-        " been recorded in the FORRT Library of Reproduction and Replication Attempts (FLoRA).",
-        "**"
-      )
-
-   rep_counter <- 0
-repro_counter <- 0
-
-entries <- vapply(seq_len(n), function(i) {
-            r <- rows[i, ]
-            
-            # Build the label
-            if (n == 1) {
-              label <- ""
-            } else if (tolower(r$type) == "replication") {
-              rep_counter <<- rep_counter + 1
-              label <- paste0("**Replication ", rep_counter, "**\n")
-            } else {
-              repro_counter <<- repro_counter + 1
-              label <- paste0("**Reproduction ", repro_counter, "**\n")
-            }
-            
-            quote_source_line <- if (!is.na(r$outcome_quote_source)) paste0("\n> **Quote source:** \"",
-                                                                              r$outcome_quote_source, "\"") else ""
-            
-            oa_link <- if (!is.na(r$oa_url_r) & nchar(trimws(r$oa_url_r)) > 0) {
-                        paste0(" [🔓](", r$oa_url_r, ")")
-                      } else {
-                        ""
-                      }
-                      
-                      paste0(
-                        label,
-                        "\n> ", r$apa_ref_r_sh, oa_link, "\n",
-              "> \n",
-              "> **The authors reported the replication as:** \"", r$outcome, "\"\n",
-              "> \n",
-              "> **Quote:** ", r$outcome_quote,
-              quote_source_line
-            )
-          }, character(1))
-   
-   
-    
+    }, character(1))
 
     footer <- paste0(
-      "Manual inspection may help to assess what led to the outcome described. Future research can learn from replications and build on them. More information about why and how we submitted this automated comment was submitted can be found [here](https://github.com/forrtproject/flora-pubpeer/blob/main/README.md)\n\n",
+      "Manual inspection may help to assess what led to the outcome described. ",
+      "Future research can learn from replications and build on them. More ",
+      "information about why and how we submitted this automated comment can be ",
+      "found [here](https://github.com/forrtproject/flora-pubpeer/blob/main/README.md)\n\n",
       "FLoRA Notify Team"
     )
+
     messages[[doi]] <- paste(c(header, entries, footer), collapse = "\n\n\n")
   }
 
   messages
 }
-
-
 ```
 
-# create message
-```{r}
+## Create Message CSV
 
+```{r create-message-csv}
 msgs <- generate_flora_messages(df_rand50)
 
 msgs_df <- data.frame(
-  doi_o   = names(msgs),
+  doi_o = names(msgs),
   message = unlist(msgs),
   row.names = NULL,
   stringsAsFactors = FALSE
@@ -187,12 +185,12 @@ msgs_df <- data.frame(
   mutate(
     message = iconv(message, from = "UTF-8", to = "UTF-8", sub = " "),
     message = str_replace_all(message, "[^\x01-\x7F]", "-"),
-    message = str_replace_all(message, "-{2,}", "-")
+    message = str_replace_all(message, "-{2,}", "-"),
+    message = str_replace_all(message, "\\[Open Access\\]", "\U0001F513 [Open Access]")
   )
 
-msgs_df %>% filter(doi_o=="10.1016/j.obhdp.2006.10.001")
+msgs_df |>
+  filter(doi_o == "10.1016/j.obhdp.2006.10.001")
+
 readr::write_csv(msgs_df, "msgs.csv")
-
-
 ```
-:::
