@@ -393,6 +393,7 @@ display: none;
 <h2>Load And Clean Data</h2>
 <pre class="r"><code>data &lt;- csv_to_flora_json(&quot;flora.csv&quot;)
 df &lt;- flora_json_to_df(data)
+
 # remove outcomes that are termed uninformative or unclear
 df &lt;- df %&gt;% filter(outcome!= &quot;unclear&quot;) %&gt;% filter(outcome != &quot;uninformative&quot;)
 df &lt;- df %&gt;% filter(!(is.na(apa_ref_r)))
@@ -416,7 +417,10 @@ DOI.</h3>
   if (is.na(url) || nchar(trimws(url)) == 0) return(NA)
   m &lt;- regmatches(url, regexpr(&quot;(?i)10\\.\\d{4,}[/\\S]+&quot;, url, perl = TRUE))
   if (length(m) == 0) return(NA)
-  tolower(trimws(gsub(&quot;[[:punct:]]+$&quot;, &quot;&quot;, m)))
+  m &lt;- tolower(trimws(m))
+  m &lt;- gsub(&quot;\\.(pdf|html|htm|xml|csv|txt)$&quot;, &quot;&quot;, m)
+  m &lt;- gsub(&quot;[[:punct:]]+$&quot;, &quot;&quot;, m)
+  m
 }
 
 df_rand50 &lt;- df_rand50 |&gt;

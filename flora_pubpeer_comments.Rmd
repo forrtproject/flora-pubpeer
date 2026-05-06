@@ -49,6 +49,7 @@ shorten_apa <- function(ref) {
 ```{r load-clean-data}
 data <- csv_to_flora_json("flora.csv")
 df <- flora_json_to_df(data)
+
 # remove outcomes that are termed uninformative or unclear
 df <- df %>% filter(outcome!= "unclear") %>% filter(outcome != "uninformative")
 df <- df %>% filter(!(is.na(apa_ref_r)))
@@ -80,7 +81,10 @@ extract_doi_id <- function(url) {
   if (is.na(url) || nchar(trimws(url)) == 0) return(NA)
   m <- regmatches(url, regexpr("(?i)10\\.\\d{4,}[/\\S]+", url, perl = TRUE))
   if (length(m) == 0) return(NA)
-  tolower(trimws(gsub("[[:punct:]]+$", "", m)))
+  m <- tolower(trimws(m))
+  m <- gsub("\\.(pdf|html|htm|xml|csv|txt)$", "", m)
+  m <- gsub("[[:punct:]]+$", "", m)
+  m
 }
 
 df_rand50 <- df_rand50 |>
