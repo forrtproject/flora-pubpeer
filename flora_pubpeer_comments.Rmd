@@ -16,7 +16,7 @@ library(readr)
 source("flora_converter.R")
 ```
 
-## Helper Functions
+## Functions to shorten lengthy references
 
 ```{r helper-functions}
 shorten_apa <- function(ref) {
@@ -55,12 +55,45 @@ df <- df |>
 
 df$apa_ref_r_sh <- sapply(df$apa_ref_r, shorten_apa)
 
-rand_doi <- sample(df$doi_o, 300)
+rand_doi <- sample(df$doi_o, 2156)
 df_rand50 <- df |>   filter(doi_o %in% rand_doi)
 
 
 
 ```
+
+
+## Match Doi of replication reference with open access doi
+
+```{r matchingDoi}
+
+
+extract_doi_id <- function(url) {
+  if (is.na(url) || nchar(trimws(url)) == 0) return(NA)
+  m <- regmatches(url, regexpr("(?i)10\\.\\d{4,}[/\\S]+", url, perl = TRUE))
+  if (length(m) == 0) return(NA)
+  tolower(trimws(gsub("[[:punct:]]+$", "", m)))
+}
+
+df_rand50 <- df_rand50 |>
+  mutate(oa_url_r_matched = ifelse(
+    !is.na(oa_url_r) &
+    !is.na(doi_r) &
+    map_chr(oa_url_r, extract_doi_id) == tolower(trimws(doi_r)),
+    NA_character_,
+    oa_url_r
+  ))
+
+
+test =df_rand50 |>
+  filter(!is.na(oa_url_r) & is.na(oa_url_r_matched)) |>
+  select(doi_r, oa_url_r, oa_url_r_matched)
+
+
+
+```
+
+
 
 ## Generate PubPeer Messages
 

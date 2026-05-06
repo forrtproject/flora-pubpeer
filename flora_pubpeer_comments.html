@@ -11,7 +11,7 @@
 
 
 
-<title>FLORA Converter — Notebook Test</title>
+<title>FLORA Converter - PubPeer Comments</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -348,13 +348,13 @@ display: none;
 
 
 
-<h1 class="title toc-ignore">FLORA Converter — Notebook Test</h1>
+<h1 class="title toc-ignore">FLORA Converter - PubPeer Comments</h1>
 
 </div>
 
 
-<div id="load-the-converter" class="section level2">
-<h2>Load the converter</h2>
+<div id="load-converter" class="section level2">
+<h2>Load Converter</h2>
 <pre class="r"><code>source(&quot;flora_converter.R&quot;)</code></pre>
 <pre><code>## Warning: package &#39;jsonlite&#39; was built under R version 4.5.3</code></pre>
 <pre><code>## 
@@ -363,32 +363,25 @@ display: none;
 ## 
 ##     flatten</code></pre>
 </div>
-<div id="shorten-references-length" class="section level1">
-<h1>Shorten references length</h1>
+<div id="functions-to-shorten-lengthy-references" class="section level2">
+<h2>Functions to shorten lengthy references</h2>
 <pre class="r"><code>shorten_apa &lt;- function(ref) {
-  if (is.na(ref) || nchar(trimws(ref)) == 0) return(ref)
-  
-  # Extract year
+  if (is.na(ref) || nchar(trimws(ref)) == 0) {
+    return(ref)
+  }
+
   year_match &lt;- regmatches(ref, regexpr(&quot;\\(\\d{4}\\)&quot;, ref))
-  if (length(year_match) == 0) return(ref)
+  if (length(year_match) == 0) {
+    return(ref)
+  }
+
   year &lt;- year_match[1]
-  
-  # Extract author string — everything before the year
-  author_str &lt;- trimws(sub(year, &quot;&quot;, ref, fixed = TRUE))
-  author_str &lt;- trimws(sub(paste0(sub(year, &quot;&quot;, ref, fixed = TRUE) |&gt; 
-                                    strsplit(year, fixed = TRUE) |&gt; 
-                                    unlist() |&gt; tail(1)), &quot;&quot;, author_str, fixed = TRUE))
+
   author_str &lt;- trimws(strsplit(ref, year, fixed = TRUE)[[1]][1])
-  
-  # Get first author family name
   first_author_family &lt;- trimws(strsplit(author_str, &quot;,&quot;)[[1]][1])
-  
-  # Count commas to determine number of authors
   comma_count &lt;- lengths(regmatches(author_str, gregexpr(&quot;,&quot;, author_str)))
-  
-  # Build rest of reference from year onward
   rest &lt;- paste0(year, trimws(strsplit(ref, year, fixed = TRUE)[[1]][2]))
-  
+
   if (comma_count &gt;= 3) {
     paste0(first_author_family, &quot; et al. &quot;, rest)
   } else {
@@ -396,40 +389,31 @@ display: none;
   }
 }</code></pre>
 </div>
-<div id="load-data-convert" class="section level1">
-<h1>load data convert</h1>
+<div id="load-and-clean-data" class="section level2">
+<h2>Load And Clean Data</h2>
 <pre class="r"><code>data &lt;- csv_to_flora_json(&quot;flora.csv&quot;)
-df   &lt;- flora_json_to_df(data)
+df &lt;- flora_json_to_df(data)
 
-
-
-# Fix encoding immediately after loading
 df &lt;- df |&gt;
-  mutate(across(where(is.character), \(x) iconv(x, from = &quot;latin1&quot;, to = &quot;UTF-8&quot;, sub = &quot; &quot;))) |&gt;
-  mutate(across(where(is.character), \(x) str_replace_all(x, &quot;[^\x01-\x7F]&quot;, &quot;-&quot;))) |&gt;
-  mutate(across(where(is.character), \(x) str_replace_all(x, &quot;-{2,}&quot;, &quot;-&quot;))) |&gt;  # ← add this line
-  mutate(across(where(is.character), \(x) str_replace_all(x, &quot;\\s+&quot;, &quot; &quot;))) |&gt;
-  mutate(across(where(is.character), \(x) trimws(x)))
+    mutate(across(where(is.character), str_squish))
 
-
-# Create shortened APA reference
 df$apa_ref_r_sh &lt;- sapply(df$apa_ref_r, shorten_apa)
 
-
-# Select 50 random rows
-rand_doi &lt;- sample(df$doi_o, 200)
-df_rand50 &lt;- df |&gt; filter(doi_o %in% rand_doi)</code></pre>
+rand_doi &lt;- sample(df$doi_o, 2156)
+df_rand50 &lt;- df |&gt;   filter(doi_o %in% rand_doi)</code></pre>
 </div>
-<div id="process" class="section level1">
-<h1>process</h1>
+<div id="generate-pubpeer-messages" class="section level2">
+<h2>Generate PubPeer Messages</h2>
+<p>The message generation workflow:</p>
 <ol style="list-style-type: decimal">
-<li>convert json back to data frame</li>
-<li>clean up so that only non na doi_o and value in either doi_r or
-url_r</li>
-<li>new csv file for output</li>
-<li>for each unique doi_o generate row with reference, outcome, outcome
-quote and outcome source columns, column with message. If multiple doi_r
-should include all in message.</li>
+<li>Convert JSON back to a data frame.</li>
+<li>Keep records with a non-missing <code>doi_o</code> and a value in
+either <code>doi_r</code> or <code>url_r</code>.</li>
+<li>Create a CSV file for output.</li>
+<li>Generate one row per unique <code>doi_o</code>, including the
+reference, outcome, quote, quote source, and message. If there are
+multiple <code>doi_r</code> values, include all of them in the
+message.</li>
 </ol>
 <pre class="r"><code>generate_flora_messages &lt;- function(df) {
   messages &lt;- list()
@@ -437,97 +421,121 @@ should include all in message.</li>
   for (doi in unique(df$doi_o)) {
     rows &lt;- df[df$doi_o == doi, ]
     rows$apa_ref_r_sh &lt;- sapply(rows$apa_ref_r, shorten_apa)
-    n    &lt;- nrow(rows)
+    n &lt;- nrow(rows)
 
-      n_replications  &lt;- sum(tolower(rows$type) == &quot;replication&quot;, na.rm = TRUE)
-      n_reproductions &lt;- sum(tolower(rows$type) == &quot;reproduction&quot;, na.rm = TRUE)
+    n_replications &lt;- sum(tolower(rows$type) == &quot;replication&quot;, na.rm = TRUE)
+    n_reproductions &lt;- sum(tolower(rows$type) == &quot;reproduction&quot;, na.rm = TRUE)
+
+    attempt_parts &lt;- c(
+      if (n_replications &gt; 0) {
+        paste0(
+          n_replications,
+          &quot; replication attempt&quot;,
+          if (n_replications != 1) &quot;s&quot; else &quot;&quot;
+        )
+      },
+      if (n_reproductions &gt; 0) {
+        paste0(
+          n_reproductions,
+          &quot; reproduction attempt&quot;,
+          if (n_reproductions != 1) &quot;s&quot; else &quot;&quot;
+        )
+      }
+    )
+
+    header &lt;- paste0(
+      &quot;**&quot;,
+      paste(attempt_parts, collapse = &quot; and &quot;),
+      &quot; of this paper &quot;,
+      if ((n_replications + n_reproductions) != 1) &quot;have&quot; else &quot;has&quot;,
+      &quot; been recorded in the FORRT Library of Reproduction and &quot;,
+      &quot;Replication Attempts (FLoRA).&quot;,
+      &quot;**&quot;
+    )
+
+    rep_counter &lt;- 0
+    repro_counter &lt;- 0
+
+    entries &lt;- vapply(seq_len(n), function(i) {
+      r &lt;- rows[i, ]
+
+      if (n == 1) {
+        label &lt;- &quot;&quot;
+      } else if (tolower(r$type) == &quot;replication&quot;) {
+        rep_counter &lt;&lt;- rep_counter + 1
+        label &lt;- paste0(&quot;**Replication &quot;, rep_counter, &quot;**\n&quot;)
+      } else {
+        repro_counter &lt;&lt;- repro_counter + 1
+        label &lt;- paste0(&quot;**Reproduction &quot;, repro_counter, &quot;**\n&quot;)
+      }
+
+      quote_source_line &lt;- if (!is.na(r$outcome_quote_source)) {
+        paste0(&quot;\n&gt; **Quote source:** &quot;, r$outcome_quote_source)
+      } else {
+        &quot;&quot;
+      }
+
+      extract_doi_id &lt;- function(url) {
+        if (is.na(url) || nchar(trimws(url)) == 0) return(NA)
+        m &lt;- regmatches(url, regexpr(&quot;(?i)10\\.\\d{4,}[/\\S]+&quot;, url, perl = TRUE))
+        if (length(m) == 0) return(NA)
+        tolower(trimws(gsub(&quot;[[:punct:]]+$&quot;, &quot;&quot;, m)))
+      }
+
+      doi_from_ref &lt;- extract_doi_id(r$apa_ref_r)
+      doi_from_oa  &lt;- extract_doi_id(r$oa_url_r)
+
+      oa_link &lt;- if (
+        !is.na(r$oa_url_r) &amp;&amp;
+        nchar(trimws(r$oa_url_r)) &gt; 0 &amp;&amp;
+        (is.na(doi_from_ref) || is.na(doi_from_oa) || !identical(doi_from_ref, doi_from_oa))
+      ) {
+        paste0(&quot; \U0001F513 [Open Access](&quot;, r$oa_url_r, &quot;)&quot;)
+      } else {
+        &quot;&quot;
+      }
+      
+      
       
 
-      attempt_parts &lt;- c(
-        if (n_replications &gt; 0) paste0(n_replications, &quot; replication attempt&quot;, if (n_replications != 1) &quot;s&quot; else &quot;&quot;),
-        if (n_reproductions &gt; 0) paste0(n_reproductions, &quot; reproduction attempt&quot;, if (n_reproductions != 1) &quot;s&quot; else &quot;&quot;)
+      paste0(
+        label,
+        &quot;\n&gt; &quot;, r$apa_ref_r_sh, oa_link, &quot;\n&quot;,
+        &quot;&gt; \n&quot;,
+        &quot;&gt; **The authors reported the replication as:** &quot;, r$outcome, &quot;\n&quot;,
+        &quot;&gt; **Quote:** &quot;, r$outcome_quote,
+        quote_source_line
       )
-      
-      header &lt;- paste0(
-        &quot;**&quot;,
-        paste(attempt_parts, collapse = &quot; and &quot;),
-        &quot; of this paper &quot;,
-        if ((n_replications + n_reproductions) != 1) &quot;have&quot; else &quot;has&quot;,
-        &quot; been recorded in the FORRT Library of Reproduction and Replication Attempts (FLoRA).&quot;,
-        &quot;**&quot;
-      )
-
-   rep_counter &lt;- 0
-repro_counter &lt;- 0
-
-entries &lt;- vapply(seq_len(n), function(i) {
-            r &lt;- rows[i, ]
-            
-            # Build the label
-            if (n == 1) {
-              label &lt;- &quot;&quot;
-            } else if (tolower(r$type) == &quot;replication&quot;) {
-              rep_counter &lt;&lt;- rep_counter + 1
-              label &lt;- paste0(&quot;**Replication &quot;, rep_counter, &quot;**\n&quot;)
-            } else {
-              repro_counter &lt;&lt;- repro_counter + 1
-              label &lt;- paste0(&quot;**Reproduction &quot;, repro_counter, &quot;**\n&quot;)
-            }
-            
-            quote_source_line &lt;- if (!is.na(r$outcome_quote_source)) paste0(&quot;\n&gt; **Quote source:** \&quot;&quot;,
-                                                                              r$outcome_quote_source, &quot;\&quot;&quot;) else &quot;&quot;
-            
-            oa_link &lt;- if (!is.na(r$oa_url_r) &amp; nchar(trimws(r$oa_url_r)) &gt; 0) {
-                        paste0(&quot; [🔓](&quot;, r$oa_url_r, &quot;)&quot;)
-                      } else {
-                        &quot;&quot;
-                      }
-                      
-                      paste0(
-                        label,
-                        &quot;\n&gt; &quot;, r$apa_ref_r_sh, oa_link, &quot;\n&quot;,
-              &quot;&gt; \n&quot;,
-              &quot;&gt; **The authors reported the replication as:** \&quot;&quot;, r$outcome, &quot;\&quot;\n&quot;,
-              &quot;&gt; \n&quot;,
-              &quot;&gt; **Quote:** &quot;, r$outcome_quote,
-              quote_source_line
-            )
-          }, character(1))
-   
-   
-    
+    }, character(1))
 
     footer &lt;- paste0(
-      &quot;Manual inspection may help to assess what led to the outcome described. Future research can learn from replications and build on them. More information about why and how we submitted this automated comment was submitted can be found [here](https://github.com/forrtproject/flora-pubpeer/blob/main/README.md)\n\n&quot;,
-      &quot;FLoRA Notify Team&quot;
+      &quot;Manual inspection may help to assess what led to the described outcome. &quot;,
+      &quot;Future research can learn from replications and build on them. More &quot;,
+      &quot;information about why and how we submitted this automated comment can be &quot;,
+      &quot;found [here](https://github.com/forrtproject/flora-pubpeer/blob/main/README.md)\n\n&quot;,
+      &quot;RepNote Team&quot;
     )
+
     messages[[doi]] &lt;- paste(c(header, entries, footer), collapse = &quot;\n\n\n&quot;)
   }
 
   messages
 }</code></pre>
 </div>
-<div id="create-message" class="section level1">
-<h1>create message</h1>
+<div id="create-message-csv" class="section level2">
+<h2>Create Message CSV</h2>
 <pre class="r"><code>msgs &lt;- generate_flora_messages(df_rand50)
 
 msgs_df &lt;- data.frame(
-  doi_o   = names(msgs),
+  doi_o = names(msgs),
   message = unlist(msgs),
   row.names = NULL,
-  stringsAsFactors = FALSE
-) |&gt;
+  stringsAsFactors = FALSE) |&gt;
   mutate(
-    message = iconv(message, from = &quot;UTF-8&quot;, to = &quot;UTF-8&quot;, sub = &quot; &quot;),
-    message = str_replace_all(message, &quot;[^\x01-\x7F]&quot;, &quot;-&quot;),
-    message = str_replace_all(message, &quot;-{2,}&quot;, &quot;-&quot;)
+    message = str_squish(message)
   )
 
-msgs_df %&gt;% filter(doi_o==&quot;10.1016/j.obhdp.2006.10.001&quot;)</code></pre>
-<pre><code>## [1] doi_o   message
-## &lt;0 rows&gt; (or 0-length row.names)</code></pre>
-<pre class="r"><code>readr::write_csv(msgs_df, &quot;msgs.csv&quot;)</code></pre>
-<p>:::</p>
+readr::write_csv(msgs_df, &quot;msgs.csv&quot;)</code></pre>
 </div>
 
 
