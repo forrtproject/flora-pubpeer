@@ -308,9 +308,9 @@ get_email_main <- function(doi_or_url,
   if (is.na(doi_or_url) || doi_or_url == "") {
     if (!quiet) warning("Invalid input: DOI or URL is NA or empty.")
     return(tibble(
-      url = NA_character_,
+      doi = NA_character_,
       emails = NA_character_,
-      extraction_method = NA_character_
+      source = NA_character_
     ))
   }
 
@@ -352,7 +352,7 @@ get_email_main <- function(doi_or_url,
         return(tibble(
           url = doi_or_url,
           emails = emails_direct,
-          extraction_method = "direct_get"
+          source = "direct_get"
         ))
       }
     }
@@ -381,7 +381,7 @@ get_email_main <- function(doi_or_url,
         return(tibble(
           url = doi_or_url,
           emails = emails_proxy,
-          extraction_method = "proxy_get"
+          source = "proxy_get"
         ))
       }
     }
@@ -404,7 +404,7 @@ get_email_main <- function(doi_or_url,
       return(tibble(
         url = doi_or_url,
         emails = emails_chromote,
-        extraction_method = "chromote"
+        source = "chromote"
       ))
     }
   }
@@ -425,7 +425,7 @@ get_email_main <- function(doi_or_url,
       return(tibble(
         url = doi_or_url,
         emails = emails_chromote_proxy,
-        extraction_method = "chromote_proxy"
+        source = "chromote_proxy"
       ))
     }
   }
@@ -460,8 +460,8 @@ get_email_main <- function(doi_or_url,
       if (!is.null(page_landing)) {
         emails_landing <- extract_emails(page_landing)
         if (length(emails_landing) > 0) {
-          return(tibble(url = landing_url, emails = emails_landing,
-                        extraction_method = "unpaywall_landing"))
+          return(tibble(doi = landing_url, emails = emails_landing,
+                        source = "unpaywall_landing"))
         }
         # No mailto found — try PDF links on the page
         for (pdf_link in extract_pdf_links(page_landing)) {
@@ -469,8 +469,8 @@ get_email_main <- function(doi_or_url,
           if (!quiet) message("Trying PDF link from landing page: ", pdf_link)
           emails_from_link <- emails_from_pdf_url(pdf_link, quiet = quiet)
           if (length(emails_from_link) > 0) {
-            return(tibble(url = pdf_link, emails = emails_from_link,
-                          extraction_method = "unpaywall_landing_pdf"))
+            return(tibble(doi = pdf_link, emails = emails_from_link,
+                          source = "unpaywall_landing_pdf"))
           }
         }
       }
@@ -487,8 +487,8 @@ get_email_main <- function(doi_or_url,
           page_chromote <- rvest::read_html(page_html)
           emails_chromote <- extract_emails(page_chromote)
           if (length(emails_chromote) > 0) {
-            return(tibble(url = landing_url, emails = emails_chromote,
-                          extraction_method = "unpaywall_landing_chromote"))
+            return(tibble(doi = landing_url, emails = emails_chromote,
+                          source = "unpaywall_landing_chromote"))
           }
           # Try PDF links found by Chromote
           for (pdf_link in extract_pdf_links(page_chromote)) {
@@ -496,8 +496,8 @@ get_email_main <- function(doi_or_url,
             if (!quiet) message("Trying PDF link from Chromote landing page: ", pdf_link)
             emails_from_link <- emails_from_pdf_url(pdf_link, quiet = quiet)
             if (length(emails_from_link) > 0) {
-              return(tibble(url = pdf_link, emails = emails_from_link,
-                            extraction_method = "unpaywall_landing_chromote_pdf"))
+              return(tibble(doi = pdf_link, emails = emails_from_link,
+                            source = "unpaywall_landing_chromote_pdf"))
             }
           }
         }
@@ -511,7 +511,7 @@ get_email_main <- function(doi_or_url,
   return(tibble(
     url = doi_or_url,
     emails = NA_character_,
-    extraction_method = NA_character_
+    source = NA_character_
   ))
 }
 
@@ -762,7 +762,7 @@ get_email <- function(doi_or_url,
 
   # If no emails were found, return NA
   if (length(all_emails) == 0) {
-    return(tibble(url = doi_or_url, emails = NA_character_))
+    return(tibble(doi = doi_or_url, emails = NA_character_))
   }
 
   # Return a tidy dataframe with the extracted emails
@@ -857,7 +857,7 @@ get_email_from_pdf <- function(doi_or_url, unpaywall_email = NULL, scrapeops_api
 
     if (str_detect(response, "Scientific mutual aid community")) {
       message("Sci-Hub does not have: ", doi_or_url)
-      return(tibble(doi_or_url = doi_or_url,
+      return(tibble(doi = doi_or_url,
                     emails = NA_character_,
                     status = "not on SciHub"))
     }
@@ -888,7 +888,7 @@ get_email_from_pdf <- function(doi_or_url, unpaywall_email = NULL, scrapeops_api
   }
 
   if (!downloaded) {
-    return(tibble::tibble(url = doi_or_url, emails = NA_character_, extraction_method = NA_character_))
+    return(tibble::tibble(doi = doi_or_url, emails = NA_character_, source = NA_character_))
   }
 
   pdf_text <- pdftools::pdf_text(pdf_file)
@@ -899,9 +899,9 @@ get_email_from_pdf <- function(doi_or_url, unpaywall_email = NULL, scrapeops_api
   emails <- unique(emails)
 
   if (length(emails) > 0) {
-    email_df <- tibble::tibble(url = doi_or_url, emails = emails, extraction_method = "pdf")
+    email_df <- tibble::tibble(doi = doi_or_url, emails = emails, source = "pdf")
   } else {
-    email_df <- tibble::tibble(url = doi_or_url, emails = NA_character_, extraction_method = NA_character_)
+    email_df <- tibble::tibble(doi = doi_or_url, emails = NA_character_, source = NA_character_)
   }
   email_df
 }

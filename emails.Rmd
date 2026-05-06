@@ -6,7 +6,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-pacman::p_load(chromote, rvest, dplyr, stringr, httr,tidyverse,readr,dotenv)
+pacman::p_load(chromote, rvest, dplyr, stringr, httr,tidyverse,readr,dotenv, httr, jsonlite, xml2, rvest, stringr, purrr, tibble, dplyr)
 ```
 
 ## Load the converter
@@ -14,6 +14,7 @@ pacman::p_load(chromote, rvest, dplyr, stringr, httr,tidyverse,readr,dotenv)
 ```{r}
 source("flora_converter.R")
 source("scrape_emails.R")
+source("scrape_emails_v2.R")
 ```
 
 # load data convert
@@ -21,13 +22,6 @@ source("scrape_emails.R")
 
 data <- csv_to_flora_json("flora.csv")
 df   <- flora_json_to_df(data)
-
-# Fix encoding immediately after loading
-df <- df |>
-  mutate(across(where(is.character), \(x) iconv(x, from = "latin1", to = "UTF-8", sub = " "))) |>
-  mutate(across(where(is.character), \(x) str_replace_all(x, "[^\x01-\x7F]", "-"))) |>
-  mutate(across(where(is.character), \(x) str_replace_all(x, "\\s+", " "))) |>
-  mutate(across(where(is.character), \(x) trimws(x)))
  
 # clean up FLoRA
 # remove uninformative and APA ref NAs
@@ -35,76 +29,61 @@ table(df$outcome)
 df <- df %>% filter(outcome!= "unclear") %>% filter(outcome != "uninformative")
 df <- df %>% filter(!(is.na(apa_ref_r)))
 
-sample_doi <- sample(df$doi_o,50)
+#remove source that is not in main article
+table(df$outcome_quote_source)
 
-sample_df <- df %>% filter(doi_o %in% sample_doi)
+df <- df %>%
+  filter(!stringr::str_detect(outcome_quote_source, 
+    regex("supplementary material|materials|github|\\bSM\\b|table|appendix", 
+          ignore_case = TRUE)))
 
-View(sample_df)
+length(unique(df$doi_o))
 
 ```
 
 #email function
 ```{r}
-email_res <- purrr::map(sample_df$doi_o, purrr::possibly(get_email_main, otherwise = NULL)) %>%
+
+doi_orig <- df %>% distinct(doi_o)
+#scrape 1
+result_v2 <- purrr::map(doi_orig$doi_o, purrr::possibly(
+  \(doi) get_email_v2(doi),
+  otherwise = tibble::tibble(doi = NA_character_, emails = NA_character_, source = NA_character_)
+)) %>%
   dplyr::bind_rows()
 
 
-###
-# Step 1: direct GET
-response <- httr::GET("https://doi.org/10.1038/nature01930", 
-                      httr::add_headers("User-Agent" = "Mozilla/5.0"))
-response$status_code
+View(result_v2)
 
-page <- rvest::read_html(httr::content(response, "text"))
+doi_missing <- result_v2 %>% filter(is.na(emails))
 
-# check mailto links
-page %>% rvest::html_nodes("a[href^='mailto']") %>% rvest::html_attr("href")
-
-# check cloudflare-protected emails
-page %>% rvest::html_nodes("a[href*='email-protection#']") %>% rvest::html_attr("href")
-
-
-get_email_main("10.1038/nature01930", debug_if_none = FALSE)
-
-
-results <- purrr::map(sample_df$doi_o, purrr::possibly(
+results_add <- purrr::map(doi_missing$doi, purrr::possibly(
   \(doi) get_email_main(doi, debug_if_none = FALSE),
   otherwise = tibble::tibble(url = NA_character_, emails = NA_character_, extraction_method = NA_character_)
 )) %>%
   dplyr::bind_rows()
-View(results)
-results <- results %>% dplyr::distinct(url, emails, .keep_all = TRUE)
+View(results_add)
 
-length(unique(sample_df$doi_o))
-results %>% filter(is.na(emails)) %>% nrow
+results_emails <- rbind(result_v2,results)
 
-write.csv(results,"email_test.csv")
+write.csv(results,"emails_authors.csv")
 
-length(unique(sample_df$doi_o))
-results %>%
-  filter(!is.na(emails)) %>%
-  dplyr::summarise(n_distinct(url))
+
 ```
 
 
 #test with unpaywall added 
 ```{r}
-doi_to_get <- results %>% filter(is.na(emails))
-View(doi_to_get)
-doi_small <- doi_to_get[1:10,]
-dotenv::load_dot_env()
-email <- Sys.getenv("UNPAYWALL_EMAIL")
 
-result_unpaywall <- purrr::map(doi_small$url, purrr::possibly(
-  \(doi) get_email_main(doi, unpaywall_email = email, debug_if_none = FALSE),
-  otherwise = tibble::tibble(url = NA_character_, emails = NA_character_, extraction_method = NA_character_)
+
+
+result_v2 <- purrr::map(doi_to_get$url, purrr::possibly(
+  \(doi) get_email_v2(doi),
+  otherwise = tibble::tibble(doi = NA_character_, emails = NA_character_, source = NA_character_)
 )) %>%
   dplyr::bind_rows()
 
-View(result_unpaywall)
-a <- get_email_main("10.1111/j.1467-6494.2012.00807.x", 
-               unpaywall_email = email,
-               debug_if_none = FALSE)
 
+View(result_v2)
 
 ```
