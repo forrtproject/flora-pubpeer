@@ -26,17 +26,7 @@ head(df)
 summary(df)
 ```
 
-## Check Duplicate Original DOIs
-
-```{r check-duplicate-dois}
-check <- df |>
-  group_by(doi_o) |>
-  filter(n() > 1) |>
-  select(doi_o, doi_r, apa_ref_r) |>
-  ungroup()
-
 View(check)
-
 write.csv(check, "check.csv")
 ```
 
