@@ -1,5 +1,5 @@
 ---
-title: "FLORA Converter — Notebook Test"
+title: "FLORA Converter - Notebook Test"
 output: html_document
 ---
 
@@ -7,58 +7,72 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Load the converter
+## Load Converter
 
-```{r}
+```{r load-converter}
 source("flora_converter.R")
 ```
 
-## Option 1 — load from a file path
+## Option 1 - Load From A File Path
 
-```{r}
+```{r load-from-file-path}
 data <- csv_to_flora_json("flora.csv")
+
 cat("Total original papers:", length(data$results))
 ```
 
-## Option 2 — load from a data.frame you already have
+## Option 2 - Load From An Existing Data Frame
 
-```{r}
-df   <- read.csv("flora.csv", fileEncoding = "UTF-8-BOM",
-                 stringsAsFactors = FALSE)
+```{r load-from-data-frame}
+df <- read.csv(
+  "flora.csv",
+  fileEncoding = "UTF-8-BOM",
+  stringsAsFactors = FALSE
+)
+
 data <- csv_to_flora_json(df)
+
 cat("Total original papers:", length(data$results))
 ```
 
-## Inspect a specific paper
+## Inspect A Specific Paper
 
-```{r}
+```{r inspect-paper}
 results <- data$results
-doi     <- "10.1177/0956797610383437"
-paper   <- results[[doi]]
+doi <- "10.1177/0956797610383437"
+paper <- results[[doi]]
 
 cat("Title:  ", paper$title, "\n")
 cat("Journal:", paper$journal, "(", paper$year, ")\n")
+
 families <- sapply(paper$authors, `[[`, "family")
+
 cat("Authors:", paste(families, collapse = ", "), "\n")
 ```
 
-## Replication stats as a data.frame
+## Replication Stats As A Data Frame
 
-```{r}
+```{r replication-stats}
 as.data.frame(paper$record$stats)
 ```
 
-## Replications as a data.frame
+## Replications As A Data Frame
 
-```{r}
+```{r replications}
 reps <- paper$record$replications
 
-null_to_na <- function(x, na = NA_character_) if (is.null(x)) na else x
+null_to_na <- function(x, na = NA_character_) {
+  if (is.null(x)) {
+    na
+  } else {
+    x
+  }
+}
 
 do.call(rbind, lapply(reps, function(r) {
   data.frame(
-    title   = null_to_na(r$title),
-    year    = null_to_na(r$year, NA_integer_),
+    title = null_to_na(r$title),
+    year = null_to_na(r$year, NA_integer_),
     journal = null_to_na(r$journal),
     outcome = null_to_na(r$outcome),
     stringsAsFactors = FALSE

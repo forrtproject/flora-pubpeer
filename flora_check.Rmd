@@ -1,3 +1,8 @@
+---
+title: "FLORA Checks"
+output: html_document
+---
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -5,33 +10,32 @@ library(tidyverse)
 library(readr)
 ```
 
-## Load the converter
+## Load Converter
 
-```{r}
+```{r load-converter}
 source("flora_converter.R")
 ```
 
-# load data convert
-```{r}
+## Load Data
+
+```{r load-data}
 data <- csv_to_flora_json("flora.csv")
-df   <- flora_json_to_df(data)
+df <- flora_json_to_df(data)
+
 head(df)
 summary(df)
 ```
-# are there duplicates?
-```{r}
-check <- df %>%
-  group_by(doi_o) %>%
-  filter(n() > 1) %>% 
-  select(doi_o,doi_r,apa_ref_r) %>%
-  ungroup
 
 View(check)
 write.csv(check, "check.csv")
 ```
-# are there NAs in apa_ref_r
-```{r}
-narefs <- df %>% filter(is.na(apa_ref_r))
+
+## Check Missing APA References
+
+```{r check-missing-apa-references}
+narefs <- df |>
+  filter(is.na(apa_ref_r))
+
 View(narefs)
 
 print(narefs$doi_o)
