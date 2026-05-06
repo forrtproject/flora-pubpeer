@@ -29,7 +29,7 @@ Replications are a prerequisite for a robust research claim, and if these attemp
 <details>
 <summary>Why use PubPeer?</summary>
 <br>PubPeer is a public platform, accessible without barriers, where anonymous and
-signed comments can be made on research articles. We use this platform because it
+signed comments can be made on research articles. We are not affiliated with PubPeer but we use this platform because it
 is the most transparent tool we have to link original and replication articles. There is
 no current infrastructure that links original articles to their replication, as citations on
 articles can only point backwards to previously completed work.<br><br> 
