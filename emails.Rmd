@@ -34,11 +34,10 @@ table(df$outcome_quote_source)
 
 df <- df %>%
   filter(!stringr::str_detect(outcome_quote_source, 
-    regex("supplementary material|materials|github|\\bSM\\b|table|appendix", 
+    regex("supplementary material|supplementary|supplemental|materials|github|\\bSM\\b|table|appendix",
           ignore_case = TRUE)))
 
 length(unique(df$doi_o))
-
 ```
 
 #email function
