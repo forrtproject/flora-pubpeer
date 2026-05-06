@@ -107,5 +107,4 @@ a <- get_email_main("10.1111/j.1467-6494.2012.00807.x",
                debug_if_none = FALSE)
 
 
-
 ```

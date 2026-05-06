@@ -442,6 +442,70 @@ get_email_main <- function(doi_or_url,
     return(emails_pdf)
   }
 
+  # 5b. Unpaywall landing pages — scrape HTML directly for all locations
+  if (!is.null(unpaywall_email)) {
+    if (!quiet) message("Attempting Unpaywall landing pages.")
+    unpaywall_urls <- tryCatch(get_unpaywall_urls(doi_only, unpaywall_email), error = function(e) NULL)
+    landing_urls <- unpaywall_urls$landing
+
+    for (landing_url in landing_urls) {
+      if (is.null(landing_url) || is.na(landing_url)) next
+      if (!quiet) message("Trying landing page: ", landing_url)
+
+      page_landing <- tryCatch({
+        resp <- httr::GET(landing_url, httr::add_headers("User-Agent" = "Mozilla/5.0"))
+        if (httr::status_code(resp) == 200) rvest::read_html(httr::content(resp, "text")) else NULL
+      }, error = function(e) NULL)
+
+      if (!is.null(page_landing)) {
+        emails_landing <- extract_emails(page_landing)
+        if (length(emails_landing) > 0) {
+          return(tibble(url = landing_url, emails = emails_landing,
+                        extraction_method = "unpaywall_landing"))
+        }
+        # No mailto found — try PDF links on the page
+        for (pdf_link in extract_pdf_links(page_landing)) {
+          pdf_link <- if (!stringr::str_detect(pdf_link, "^http")) paste0(httr::parse_url(landing_url)$scheme, "://", httr::parse_url(landing_url)$hostname, pdf_link) else pdf_link
+          if (!quiet) message("Trying PDF link from landing page: ", pdf_link)
+          emails_from_link <- emails_from_pdf_url(pdf_link, quiet = quiet)
+          if (length(emails_from_link) > 0) {
+            return(tibble(url = pdf_link, emails = emails_from_link,
+                          extraction_method = "unpaywall_landing_pdf"))
+          }
+        }
+      }
+
+      # If direct GET found nothing, try Chromote on this landing page
+      if (!quiet) message("Trying Chromote on landing page: ", landing_url)
+      live_page <- tryCatch(navigate_to(landing_url), error = function(e) NULL)
+      if (!is.null(live_page)) {
+        page_html <- tryCatch(
+          live_page$session$Runtime$evaluate("document.documentElement.outerHTML")$result$value,
+          error = function(e) NULL
+        )
+        if (!is.null(page_html)) {
+          page_chromote <- rvest::read_html(page_html)
+          emails_chromote <- extract_emails(page_chromote)
+          if (length(emails_chromote) > 0) {
+            return(tibble(url = landing_url, emails = emails_chromote,
+                          extraction_method = "unpaywall_landing_chromote"))
+          }
+          # Try PDF links found by Chromote
+          for (pdf_link in extract_pdf_links(page_chromote)) {
+            pdf_link <- if (!stringr::str_detect(pdf_link, "^http")) paste0(httr::parse_url(landing_url)$scheme, "://", httr::parse_url(landing_url)$hostname, pdf_link) else pdf_link
+            if (!quiet) message("Trying PDF link from Chromote landing page: ", pdf_link)
+            emails_from_link <- emails_from_pdf_url(pdf_link, quiet = quiet)
+            if (length(emails_from_link) > 0) {
+              return(tibble(url = pdf_link, emails = emails_from_link,
+                            extraction_method = "unpaywall_landing_chromote_pdf"))
+            }
+          }
+        }
+        tryCatch(live_page$session$close(), error = function(e) NULL)
+      }
+    }
+  }
+
   # If all attempts fail to find emails, return NA with consistent tibble structure
   if (!quiet) message("No emails found for URL: ", doi_or_url)
   return(tibble(
@@ -716,12 +780,36 @@ get_email <- function(doi_or_url,
 
 
 
-get_unpaywall_pdf_url <- function(doi, email) {
+extract_pdf_links <- function(page) {
+  links <- page %>%
+    rvest::html_nodes("a") %>%
+    rvest::html_attr("href")
+  links <- links[!is.na(links)]
+  unique(links[stringr::str_detect(links, stringr::regex("\\.pdf|/pdf|pdf/|download", ignore_case = TRUE))])
+}
+
+emails_from_pdf_url <- function(pdf_url, quiet = FALSE) {
+  pdf_file <- tempfile(fileext = ".pdf")
+  tryCatch({
+    download.file(pdf_url, pdf_file, mode = "wb", quiet = quiet)
+    text <- pdftools::pdf_text(pdf_file) %>% paste(collapse = " ")
+    emails <- stringr::str_extract_all(text, "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}")[[1]]
+    unique(emails)
+  }, error = function(e) {
+    if (!quiet) message("PDF extraction failed (", pdf_url, "): ", e$message)
+    character(0)
+  })
+}
+
+get_unpaywall_urls <- function(doi, email) {
   tryCatch({
     resp <- httr::GET(paste0("https://api.unpaywall.org/v2/", doi, "?email=", email))
     if (httr::status_code(resp) != 200) return(NULL)
     data <- jsonlite::fromJSON(httr::content(resp, "text", encoding = "UTF-8"))
-    data$best_oa_location$url_for_pdf
+    locs <- data$oa_locations
+    pdfs    <- unique(Filter(Negate(is.null), locs$url_for_pdf[!is.na(locs$url_for_pdf)]))
+    landing <- unique(Filter(Negate(is.null), locs$url_for_landing_page[!is.na(locs$url_for_landing_page)]))
+    list(pdf = pdfs, landing = landing)
   }, error = function(e) NULL)
 }
 
@@ -731,18 +819,22 @@ get_email_from_pdf <- function(doi_or_url, unpaywall_email = NULL, scrapeops_api
   pdf_file <- tempfile(fileext = ".pdf")
   downloaded <- FALSE
 
-  # Try Unpaywall first if email provided and input looks like a DOI
+  # Try all Unpaywall PDF URLs if email provided and input looks like a DOI
   if (!is.null(unpaywall_email) && !stringr::str_detect(doi_or_url, stringr::fixed("http"))) {
     if (!quiet) message("Trying Unpaywall for: ", doi_or_url)
-    pdf_url <- get_unpaywall_pdf_url(doi_or_url, unpaywall_email)
-    if (!is.null(pdf_url) && !is.na(pdf_url)) {
-      tryCatch({
-        download.file(pdf_url, pdf_file, mode = "wb", quiet = quiet)
-        downloaded <- TRUE
-        if (!quiet) message("Downloaded PDF via Unpaywall.")
-      }, error = function(e) {
-        if (!quiet) message("Unpaywall PDF download failed: ", e$message)
-      })
+    pdf_urls <- get_unpaywall_urls(doi_or_url, unpaywall_email)$pdf
+    for (pdf_url in pdf_urls) {
+      if (!is.null(pdf_url) && !is.na(pdf_url)) {
+        tryCatch({
+          download.file(pdf_url, pdf_file, mode = "wb", quiet = quiet)
+          downloaded <- TRUE
+          if (!quiet) message("Downloaded PDF via Unpaywall: ", pdf_url)
+          break
+        }, error = function(e) {
+          if (!quiet) message("Unpaywall PDF download failed (", pdf_url, "): ", e$message)
+        })
+      }
+      if (downloaded) break
     }
   }
 
