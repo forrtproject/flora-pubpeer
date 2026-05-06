@@ -68,15 +68,15 @@ systematic searching of OpenAlex for the term “replication”. Reproductions a
 
 <br>Replication outcome coding relies on what replication authors say in the abstract. If there is no abstract or summary, coders have to summarise themselves. As coders cannot know all topics in depth and weigh claims, we have to do it formally. That means, 9/10 successfully replicated claims would be coded as “mixed” since the one failed claim could be crucial for the overall conclusion. 
 
-For more information on the dataset, see the about the dataset section. For more information on coding, see [“What is FLoRA?”](https://docs.google.com/document/d/1WhrXKNIoa3Y1ERpLmT5jowZHVEIGJTp3-FBlAYfGkQE/edit?tab=t.0).<br><br>
+For more information on the dataset, see the about the dataset section. For more information on coding, see [the info page](https://forrt.org/replication-hub/flora/).<br><br>
 
 </details>
 
 <details>
 <summary>Do you maintain a copy of analysed papers or results?</summary>
 
-<br>The FORRT Replication Database database (FReD)is openly available [here](https://forrt-replications.shinyapps.io/fred_explorer/#).  
-The FORRT Library of Reproduction and Replication Attempts (FLoRA) is openly available [here](https://forrt.org/flora-explorer/), where we will offer a download soon.<br><br>
+<br>The FORRT Replication Database database (FReD)is openly available [here](https://forrt.org/explorer/).  
+The FORRT Library of Reproduction and Replication Attempts (FLoRA) is openly available [here](https://forrt.org/replication-hub/flora/) and can be browsed in the [FLoRA Explorer](https://forrt.org/flora-explorer/). The data can be downloaded under a CC-BY 4.0 license [here](https://github.com/forrtproject/FReD-data/blob/main/output/flora.csv).<br><br>
 
 </details>
 
