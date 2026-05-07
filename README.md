@@ -115,5 +115,8 @@ Robustness: Do results hold under reasonable alternative specifications? (Robust
 ## Team (alphabetically)
 RepNote was made by Prasad Chandrashekar, Ze Freeman, Lukas Röseler, Lukas Wallrich, and Josefina Weinerova. The full list of FORRT community and contributors to FReD can be found [here](https://forrt.org/contributors/?project=fred-forrt-replication-database&collapse-filter) and FLoRA can be found [here](https://forrt.org/contributors/?project=flora-forrt-library-of-replication-attempts).
 
+## Cite as
+Chandrashekar, P., Freeman, Z., Weinerova, J., Röseler, L., & Wallrich, L. (2026). RepNote: Pubpeer Comments on Replications and Reproductions. Zenodo. https://doi.org/10.5281/zenodo.20069918
+
 ## Contact
 Please contact the RepNote Team on [this Google form if you find issues in the data](https://docs.google.com/forms/d/e/1FAIpQLSeH8s--VyLYdwhER_pdO_37gpwHDp5hyWF3mGUolOOBKdc7_w/viewform) and [this Google form for general feedback](https://docs.google.com/forms/d/e/1FAIpQLSc3Qinv4xwp01JT3P9_6wyz4Hd5bqBYJr6RcvyMvWrP5hScZQ/viewform?usp=dialog).
