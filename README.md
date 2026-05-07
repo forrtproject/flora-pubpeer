@@ -66,7 +66,7 @@ systematic searching of OpenAlex for the term “replication”. Reproductions a
 <details>
 <summary>Why does RepNote say my outcome is successful/unsuccessful/mixed when I think it's not?</summary>
 
-<br>Replication outcome coding relies on what replication authors say in the abstract. If there is no abstract or summary, coders have to summarise themselves. As coders cannot know all topics in depth and weigh claims, we have to do it formally. That means, 9/10 successfully replicated claims would be coded as “mixed” since the one failed claim could be crucial for the overall conclusion. 
+<br>We rely on what replication authors say in the abstract or the report, subject to our interpretation of this. If studies are part of a meta-paper, we still rely on the individual reports where available, and otherwise on the main criterion used by the paper authors. 
 
 For more information on the dataset, see the about the dataset section. For more information on coding, see [the info page](https://forrt.org/replication-hub/flora/).<br><br>
 
