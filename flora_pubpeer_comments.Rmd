@@ -13,7 +13,7 @@ library(readr)
 ### Load Converter
 
 ```{r load-converter}
-source("flora_converter.R")
+source("R/flora_converter.R")
 ```
 
 ### Functions to shorten lengthy references
@@ -47,7 +47,7 @@ shorten_apa <- function(ref) {
 ## Load And Clean Data
 
 ```{r load-clean-data}
-data <- csv_to_flora_json("flora.csv")
+data <- csv_to_flora_json("data/flora.csv")
 df <- flora_json_to_df(data)
 
 # remove outcomes that are termed uninformative or unclear
@@ -64,19 +64,12 @@ df <- df |>
 
 df$apa_ref_r_sh <- sapply(df$apa_ref_r, shorten_apa)
 
-rand_doi <- sample(df$doi_o, 300)
-df_rand50 <- df |>   filter(doi_o %in% rand_doi)
-
-
-
 ```
 
 
 ### Match the DOI of the replication reference with the open-access DOI.
 
 ```{r matchingDoi}
-
-
 extract_doi_id <- function(url) {
   if (is.na(url) || nchar(trimws(url)) == 0) return(NA)
   m <- regmatches(url, regexpr("(?i)10\\.\\d{4,}[/\\S]+", url, perl = TRUE))
@@ -87,7 +80,7 @@ extract_doi_id <- function(url) {
   m
 }
 
-df_rand50 <- df_rand50 |>
+df <- df |>
   mutate(oa_url_r_matched = ifelse(
     !is.na(oa_url_r) &
     !is.na(doi_r) &
@@ -102,14 +95,6 @@ df_rand50 <- df_rand50 |>
 
 
 ### Generate PubPeer Messages
-
-The message generation workflow:
-
-1. Convert JSON back to a data frame.
-2. Keep records with a non-missing `doi_o` and a value in either `doi_r` or `url_r`.
-3. Create a CSV file for output.
-4. Generate one row per unique `doi_o`, including the reference, outcome, quote, quote source, and message. If there are multiple `doi_r` values, include all of them in the message.
-
 ```{r generate-messages-function}
 generate_flora_messages <- function(df) {
   messages <- list()
@@ -205,7 +190,7 @@ generate_flora_messages <- function(df) {
 ### Create Message CSV
 
 ```{r create-message-csv}
-msgs <- generate_flora_messages(df_rand50)
+msgs <- generate_flora_messages(df)
 
 msgs_df <- data.frame(
   doi_o = names(msgs),
@@ -217,7 +202,8 @@ msgs_df <- data.frame(
     message = str_replace_all(message, "\\[Open Access\\]", "\U0001F513 [Open Access]")
   )
 
-readr::write_csv(msgs_df, "msgs.csv")
+readr::write_csv(msgs_df, "data/msgs.csv")
 
+View(msgs_df)
 
 ```

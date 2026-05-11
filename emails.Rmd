@@ -12,38 +12,21 @@ pacman::p_load(chromote, rvest, dplyr, stringr, httr,tidyverse,readr,dotenv, htt
 ## Load the converter
 
 ```{r}
-source("flora_converter.R")
-source("scrape_emails.R")
-source("scrape_emails_v2.R")
+source("R/flora_converter.R")
+source("R/scrape_emails.R")
+source("R/scrape_emails_v2.R")
 ```
 
 # load data convert
 ```{r}
 
-data <- csv_to_flora_json("flora.csv")
-df   <- flora_json_to_df(data)
- 
-# clean up FLoRA
-# remove uninformative and APA ref NAs
-table(df$outcome)
-df <- df %>% filter(outcome!= "unclear") %>% filter(outcome != "uninformative")
-df <- df %>% filter(!(is.na(apa_ref_r)))
-
-#remove source that is not in main article
-table(df$outcome_quote_source)
-
-df <- df %>%
-  filter(!stringr::str_detect(outcome_quote_source, 
-    regex("supplementary material|supplementary|supplemental|materials|github|\\bSM\\b|table|appendix",
-          ignore_case = TRUE)))
-
-length(unique(df$doi_o))
+msgs_df <- read_csv("data/msgs.csv")
 ```
 
 #email function
 ```{r}
 
-doi_orig <- df %>% distinct(doi_o)
+doi_orig <- msgs_df %>% distinct(doi_o)
 #scrape 1
 result_v2 <- purrr::map(doi_orig$doi_o, purrr::possibly(
   \(doi) get_email_v2(doi),
@@ -55,7 +38,7 @@ result_v2 <- purrr::map(doi_orig$doi_o, purrr::possibly(
 View(result_v2)
 
 doi_missing <- result_v2 %>% filter(is.na(emails))
-
+nrow(doi_missing)
 results_add <- purrr::map(doi_missing$doi, purrr::possibly(
   \(doi) get_email_main(doi, debug_if_none = FALSE),
   otherwise = tibble::tibble(url = NA_character_, emails = NA_character_, extraction_method = NA_character_)
