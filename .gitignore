@@ -4,3 +4,5 @@
 .Ruserdata
 .positai
 .env
+data/email_drafts.html
+emails_authors.csv

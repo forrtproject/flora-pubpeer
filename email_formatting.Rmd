@@ -1,0 +1,160 @@
+---
+title: "RepNote Email Drafts"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readr)
+library(commonmark)
+library(lubridate)
+```
+
+```{r load-data}
+msgs        <- read_csv("data/msgs.csv")
+emails      <- read_csv("emails_authors.csv")
+flora_raw   <- read_csv("data/flora.csv")
+
+titles <- flora_raw %>%
+  select(doi_o, title_o) %>%
+  distinct(doi_o, .keep_all = TRUE)
+
+deadline <- format(Sys.Date() + 15, "%d %B %Y")
+```
+
+```{r generate-emails}
+combined <- msgs %>%
+  left_join(titles, by = "doi_o") %>%
+  left_join(
+    emails %>%
+      filter(!is.na(emails)) %>%
+      group_by(doi) %>%
+      summarise(email_addresses = paste(unique(emails), collapse = "; "), .groups = "drop"),
+    by = c("doi_o" = "doi")
+  )
+
+make_email_html <- function(title, message_md, email_addresses, deadline) {
+  message_md_fixed <- stringr::str_replace_all(message_md, "\n(> )", "  \n\\1")
+  message_html <- commonmark::markdown_html(message_md_fixed)
+
+  to_lines <- paste(
+    htmltools::htmlEscape(stringr::str_split(email_addresses, "; ")[[1]]),
+    collapse = "<br>"
+  )
+
+  paste0('
+<html><body style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; max-width: 700px;">
+
+<p style="background:#f0f4ff; padding:10px; border-radius:4px; font-size:13px; border-left:4px solid #4a6fa5;">
+<strong>To:</strong><br>', to_lines, '<br><br>
+<strong>Subject:</strong> Your work and a replication/reproduction — upcoming PubPeer comment
+</p>
+
+<p>Hello,</p>
+
+<p>We are getting in contact to let you know that a public link between your work
+<strong>', htmltools::htmlEscape(title), '</strong>
+and a replication or reproduction will be posted soon. To improve the transparency
+of the literature, we are implementing a tool for reporting replications and
+reproductions as comments on PubPeer.</p>
+
+<p>PubPeer is currently the most accessible platform to make the connection between
+research outputs visible to everyone. The articles have been coded as part of the
+FORRT Library of Reproduction and Replication Attempts (FLoRA).</p>
+
+<hr>
+', message_html, '
+<hr>
+
+<p>Please let us know if you have comments, feedback or if you think the information
+in the comment is incorrect before <strong>', deadline, '</strong>.
+You can do so by replying to this email or anonymously through
+<a href="https://docs.google.com/forms/d/e/1FAIpQLSdLePtIlPxwiKQuEZv-LIsgn77oMRlFdEwyAoKm0F1qRwaRCA/viewform?usp=publish-editor">this form</a>.
+You can find further information on the
+<a href="https://forrt.org/flora-pubpeer/">RepNote project</a> website and the
+<a href="https://forrt.org/replication-hub/">FORRT Replication Hub</a>, which
+includes additional tools to discover replications.</p>
+
+<p>Sincerely,</p>
+
+<p>
+The RepNote Team<br>
+Dr Lukas Wallrich, Birkbeck, University of London<br>
+Dr Lukas Röseler, Münster Center for Open Science, University of Münster<br>
+Dr Josefina Weinerova, Birkbeck, University of London<br>
+Dr Ze Freeman, University of Bern<br>
+Dr Prasad Chandrashekar
+</p>
+
+</body></html>')
+}
+
+set.seed(42)
+available_dois <- combined %>% filter(!is.na(email_addresses)) %>%
+  distinct(doi_o) %>%
+  pull(doi_o)
+random_dois <- sample(available_dois, min(100, length(available_dois)))
+
+email_drafts <- combined %>%
+  distinct(doi_o, .keep_all = TRUE) %>%
+  filter(!is.na(email_addresses), doi_o %in% random_dois) %>%
+  mutate(
+    html = pmap_chr(
+      list(title_o, message, email_addresses, deadline),
+      \(t, m, e, d) make_email_html(t, m, e, d)
+    )
+  )
+
+nrow(email_drafts)
+```
+
+```{r save-html}
+n_drafts <- nrow(email_drafts)
+
+nav_script <- '
+<script>
+var current = 0;
+var emails = document.querySelectorAll(".email-block");
+function show(i) {
+  emails.forEach(function(e) { e.style.display = "none"; });
+  emails[i].style.display = "block";
+  document.getElementById("counter").innerText = (i+1) + " of " + emails.length;
+  current = i;
+}
+function next() { if (current < emails.length-1) show(current+1); }
+function prev() { if (current > 0) show(current-1); }
+window.onload = function() { show(0); };
+</script>'
+
+nav_bar <- '
+<div style="position:sticky;top:0;background:#fff;padding:10px 0;border-bottom:1px solid #ddd;z-index:99;display:flex;align-items:center;gap:12px;">
+  <button onclick="prev()">&#8592; Previous</button>
+  <span id="counter"></span>
+  <button onclick="next()">Next &#8594;</button>
+</div>'
+
+blocks <- map_chr(seq_len(n_drafts), \(i) {
+  paste0(
+    '<div class="email-block" style="padding:20px;">',
+    email_drafts$html[i],
+    '</div>'
+  )
+})
+
+writeLines(
+  paste0(
+    '<html><head>', nav_script, '</head><body style="font-family:Arial;max-width:800px;margin:auto;">',
+    nav_bar,
+    paste(blocks, collapse = "\n"),
+    '</body></html>'
+  ),
+  "data/email_drafts.html"
+)
+
+message("Saved ", n_drafts, " email drafts to data/email_drafts.html")
+```
+
+```{r preview}
+browseURL("data/email_drafts.html")
+```
