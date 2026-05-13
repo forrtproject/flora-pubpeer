@@ -84,7 +84,7 @@ The FORRT Library of Reproduction and Replication Attempts (FLoRA) is openly ava
 <summary>Something is broken. Who can help me?</summary>
 
 <br>
-Please contact the RepNote Team on <a href="https://docs.google.com/forms/d/e/1FAIpQLSc3Qinv4xwp01JT3P9_6wyz4Hd5bqBYJr6RcvyMvWrP5hScZQ/viewform?usp=dialog">this Google form</a>.<br><br>
+Please contact the RepNote Team on <a href="[https://docs.google.com/forms/d/e/1FAIpQLSdLePtIlPxwiKQuEZv-LIsgn77oMRlFdEwyAoKm0F1qRwaRCA/viewform?usp=header]">this Google form</a>.<br><br>
 
 </details>
 
