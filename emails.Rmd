@@ -46,26 +46,14 @@ results_add <- purrr::map(doi_missing$doi, purrr::possibly(
   dplyr::bind_rows()
 View(results_add)
 
-results_emails <- rbind(result_v2,results)
+results_add <- results_add %>% rename(doi=url)
+results_add <- results_add %>%
+  mutate(doi = stringr::str_remove(doi, "^https?://(dx\\.)?doi\\.org/"))
 
-write.csv(results,"emails_authors.csv")
+results_emails <- rbind(result_v2,results_add)
+View(results_emails)
+write.csv(results_emails,"emails_authors.csv")
 
-
-```
-
-
-#test with unpaywall added 
-```{r}
-
-
-
-result_v2 <- purrr::map(doi_to_get$url, purrr::possibly(
-  \(doi) get_email_v2(doi),
-  otherwise = tibble::tibble(doi = NA_character_, emails = NA_character_, source = NA_character_)
-)) %>%
-  dplyr::bind_rows()
-
-
-View(result_v2)
-
+nrow(results_emails)
+results_emails %>% filter(!is.na(emails)) %>% nrow
 ```
