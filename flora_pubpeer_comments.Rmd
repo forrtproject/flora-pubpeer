@@ -57,7 +57,7 @@ df <- df %>% filter(!(is.na(apa_ref_r)))
 #remove source that is not in main article
 df <- df %>%
   filter(!stringr::str_detect(outcome_quote_source, 
-    regex("supplementary material|supplementary|supplemental|materials|github|\\bSM\\b|table|appendix|dataset",
+    regex("supplementary material|supplementary|supplemental|materials|github|\\bSM\\b|table|appendix|dataset|data",
           ignore_case = TRUE)))
 df <- df |>
     mutate(across(where(is.character), str_squish))

@@ -48,26 +48,25 @@ make_email_html <- function(title, message_md, email_addresses, deadline) {
 
 <p style="background:#f0f4ff; padding:10px; border-radius:4px; font-size:13px; border-left:4px solid #4a6fa5;">
 <strong>To:</strong><br>', to_lines, '<br><br>
-<strong>Subject:</strong> Your work and a replication/reproduction — upcoming PubPeer comment
+<strong>Subject:</strong> Your work has a replication/reproduction — upcoming PubPeer comment
 </p>
 
 <p>Hello,</p>
 
-<p>We are getting in contact to let you know that a public link between your work
+<p>We are getting in contact to let you know that we will soon post a semi-automated comment on your article
 <strong>', htmltools::htmlEscape(title), '</strong>
-and a replication or reproduction will be posted soon. To improve the transparency
-of the literature, we are implementing a tool for reporting replications and
-reproductions as comments on PubPeer.</p>
+on PubPeer, which will contain information about a replication or reproduction. This is part of a project to improve findability of replication and reproduction attempts.</p>
 
 <p>PubPeer is currently the most accessible platform to make the connection between
 research outputs visible to everyone. The articles have been coded as part of the
-FORRT Library of Reproduction and Replication Attempts (FLoRA).</p>
+FORRT Library of Reproduction and Replication Attempts (FLoRA). This comment will be one of 100 comments we will be posting
+as part of the first wave of approximately 2000 comments. The comment will look as follows: </p>
 
 <hr>
 ', message_html, '
 <hr>
 
-<p>Please let us know if you have comments, feedback or if you think the information
+<p>Please let us know if you have feedback or if you think the information
 in the comment is incorrect before <strong>', deadline, '</strong>.
 You can do so by replying to this email or anonymously through
 <a href="https://docs.google.com/forms/d/e/1FAIpQLSdLePtIlPxwiKQuEZv-LIsgn77oMRlFdEwyAoKm0F1qRwaRCA/viewform?usp=publish-editor">this form</a>.
@@ -157,4 +156,17 @@ message("Saved ", n_drafts, " email drafts to data/email_drafts.html")
 
 ```{r preview}
 browseURL("data/email_drafts.html")
+```
+
+#final list of comments for pubpeer
+```{r}
+email_drafts <- email_drafts %>%
+  filter(!str_detect(title_o, "Knowledge about others reduces one’s own sense of anonymity"))
+nrow(email_drafts)
+
+# Get list of DOIs for which emails were created
+first_batch_dois <- email_drafts %>% select(doi_o)
+colnames(first_batch_dois)
+
+write.csv(first_batch_dois,"data/first_batch.csv")
 ```
