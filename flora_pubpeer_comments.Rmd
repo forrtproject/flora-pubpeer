@@ -174,7 +174,8 @@ generate_flora_messages <- function(df) {
 
     footer <- paste0(
       "Manual inspection may help to assess what led to the described outcome. ",
-      "Future research can learn from replications and build on them. More ",
+      "Future research can learn from replications and build on them. ",
+      "We welcome any clarifications or further context as comments on PubPeer. More ",
       "information about why and how we submitted this automated comment can be ",
       "found [here](https://github.com/forrtproject/flora-pubpeer/blob/main/README.md)\n\n",
       "RepNote Team"
@@ -207,3 +208,14 @@ readr::write_csv(msgs_df, "data/msgs.csv")
 View(msgs_df)
 
 ```
+
+
+### first batch
+
+```{r}
+first_batch_dois <- read_csv("data/first_batch.csv")
+first_batch_messages <- msgs_df %>% filter(doi_o %in% first_batch_dois$doi_o)
+nrow(first_batch_messages)
+write.csv(first_batch_messages, "data/first_batch_msgs.csv")
+```
+
