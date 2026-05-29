@@ -113,7 +113,7 @@ Robustness: Do results hold under reasonable alternative specifications? (Robust
 * *Key distinction:* **If new data are collected or used (e.g., an additional decade of data), it is a replication. If the same data are re-analysed to verify the original results, it is a reproduction.**
 
 ## Team 
-RepNote was made by (alphabetically) Josefina Weinerova, Lukas Röseler, Lukas Wallrich, Prasad Chandrashekar, and Ze Freeman. The full list of FORRT community and contributors to FReD can be found [here](https://forrt.org/contributors/?project=fred-forrt-replication-database&collapse-filter) and FLoRA can be found [here](https://forrt.org/contributors/?project=flora-forrt-library-of-replication-attempts).
+RepNote was made by (alphabetically) Prasad Chandrashekar, Ze Freeman, Josefina Weinerova, Lukas Röseler, and Lukas Wallrich. The full list of FORRT community and contributors to FReD can be found [here](https://forrt.org/contributors/?project=fred-forrt-replication-database&collapse-filter) and FLoRA can be found [here](https://forrt.org/contributors/?project=flora-forrt-library-of-replication-attempts).
 
 ## Cite as
 Chandrashekar, P., Freeman, Z., Weinerova, J., Röseler, L., & Wallrich, L. (2026). RepNote: Pubpeer Comments on Replications and Reproductions. Zenodo. https://doi.org/10.5281/zenodo.20069918
