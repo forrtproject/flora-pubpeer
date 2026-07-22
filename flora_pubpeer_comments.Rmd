@@ -42,14 +42,20 @@ shorten_apa <- function(ref) {
     paste0(author_str, " ", rest)
   }
 }
+linkify_doi <- function(ref) {
+  if (is.na(ref) || nchar(trimws(ref)) == 0) {
+    return(ref)
+  }
+  gsub("(https?://doi\\.org/\\S+)", "[\\1](\\1)", ref)
+}
 ```
 
 ## Load And Clean Data
 
 ```{r load-clean-data}
-data <- csv_to_flora_json("data/flora.csv")
+data <- csv_to_flora_json("https://raw.githubusercontent.com/forrtproject/fred-data/main/output/flora.csv")
 df <- flora_json_to_df(data)
-
+table(df$outcome)
 # remove outcomes that are termed uninformative or unclear
 df <- df %>% filter(outcome!= "unclear") %>% filter(outcome != "uninformative")
 df <- df %>% filter(!(is.na(apa_ref_r)))
@@ -62,8 +68,9 @@ df <- df %>%
 df <- df |>
     mutate(across(where(is.character), str_squish))
 
-df$apa_ref_r_sh <- sapply(df$apa_ref_r, shorten_apa)
+df$apa_ref_r_sh <- sapply(df$apa_ref_r, function(x) linkify_doi(shorten_apa(x)))
 
+df <- df %>% filter(doi_o != doi_r)
 ```
 
 
@@ -101,7 +108,7 @@ generate_flora_messages <- function(df) {
 
   for (doi in unique(df$doi_o)) {
     rows <- df[df$doi_o == doi, ]
-    rows$apa_ref_r_sh <- sapply(rows$apa_ref_r, shorten_apa)
+    rows$apa_ref_r_sh <- sapply(rows$apa_ref_r, function(x) linkify_doi(shorten_apa(x)))
     n <- nrow(rows)
 
     n_replications <- sum(tolower(rows$type) == "replication", na.rm = TRUE)
@@ -151,10 +158,11 @@ generate_flora_messages <- function(df) {
       }
 
       quote_source_line <- if (!is.na(r$outcome_quote_source)) {
-        paste0("\n> **Quote source:** ", r$outcome_quote_source)
+        paste0("\n> \n> **Quote source:** ", r$outcome_quote_source)
       } else {
         ""
       }
+      study_type <- if (tolower(r$type) == "replication") "replication" else "reproduction"
 
       oa_link <- if (!is.na(r$oa_url_r_matched) && nchar(trimws(r$oa_url_r_matched)) > 0) {
         paste0(" [Open Access](", r$oa_url_r_matched, ")")
@@ -166,7 +174,8 @@ generate_flora_messages <- function(df) {
         label,
         "\n> ", r$apa_ref_r_sh, oa_link, "\n",
         "> \n",
-        "> **The authors reported the replication as:** ", r$outcome, "\n",
+        "> **The authors reported the ", study_type, " as:** ", r$outcome, "\n",
+        ">\n",
         "> **Quote:** ", r$outcome_quote,
         quote_source_line
       )
@@ -177,7 +186,7 @@ generate_flora_messages <- function(df) {
       "Future research can learn from replications and build on them. ",
       "We welcome any clarifications or further context as comments on PubPeer. More ",
       "information about why and how we submitted this automated comment can be ",
-      "found [here](https://github.com/forrtproject/flora-pubpeer/blob/main/README.md)\n\n",
+      "found [here](https://forrt.org/flora-pubpeer/)\n\n",
       "RepNote Team"
     )
 
@@ -209,13 +218,12 @@ View(msgs_df)
 
 ```
 
-
-### first batch
-
+#Remove original batch
 ```{r}
-first_batch_dois <- read_csv("data/first_batch.csv")
-first_batch_messages <- msgs_df %>% filter(doi_o %in% first_batch_dois$doi_o)
-nrow(first_batch_messages)
-write.csv(first_batch_messages, "data/first_batch_msgs.csv")
+setdiff(first_batch_dois,msgs_df$doi_o)
+first_batch_dois <- read_csv("data/first_batch.csv")$doi_o
+msgs_df <- msgs_df %>% filter(!doi_o %in% first_batch_dois)
+nrow(msgs_df)
+
 ```
 
