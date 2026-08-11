@@ -88,13 +88,18 @@ extract_doi_id <- function(url) {
 }
 
 df <- df |>
-  mutate(oa_url_r_matched = ifelse(
-    !is.na(oa_url_r) &
-    !is.na(doi_r) &
-    map_chr(oa_url_r, extract_doi_id) == tolower(trimws(doi_r)),
-    NA_character_,
-    oa_url_r
-  ))
+  mutate(
+    oa_url_r_doi = map_chr(oa_url_r, extract_doi_id),
+    oa_url_r_matched = ifelse(
+      !is.na(oa_url_r) &
+      !is.na(doi_r) &
+      !is.na(oa_url_r_doi) &
+      oa_url_r_doi == tolower(trimws(doi_r)),
+      NA_character_,
+      oa_url_r
+    )
+  ) %>%
+  select(-oa_url_r_doi)
 
 
 ```
@@ -212,9 +217,7 @@ msgs_df <- data.frame(
     message = str_replace_all(message, "\\[Open Access\\]", "\U0001F513 [Open Access]")
   )
 
-readr::write_csv(msgs_df, "data/msgs.csv")
 
-View(msgs_df)
 
 ```
 
@@ -225,5 +228,6 @@ first_batch_dois <- read_csv("data/first_batch.csv")$doi_o
 msgs_df <- msgs_df %>% filter(!doi_o %in% first_batch_dois)
 nrow(msgs_df)
 
+readr::write_csv(msgs_df, "data/msgs.csv")
 ```
 

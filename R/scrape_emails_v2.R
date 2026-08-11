@@ -52,14 +52,101 @@ EMAIL_RE <- "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"
   )
 }
 
+# Country names that sometimes end an affiliation string with no separator
+# before a corresponding-author email (e.g. EPMC's raw affiliation text
+# "...Giessen, Germanydoris.braun@psychol.uni-giessen.de"). Sorted longest
+# first so multi-word countries are tried before their substrings.
+COUNTRY_NAMES <- c(
+  "United States of America", "United Arab Emirates", "Bosnia and Herzegovina",
+  "Trinidad and Tobago", "Antigua and Barbuda", "Papua New Guinea",
+  "Dominican Republic", "United Kingdom", "United States", "South Africa",
+  "South Korea", "North Korea", "Sri Lanka", "New Zealand", "Czech Republic",
+  "Saudi Arabia", "Costa Rica", "Puerto Rico", "El Salvador", "Sierra Leone",
+  "Burkina Faso", "Ivory Coast", "Hong Kong",
+  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Argentina",
+  "Armenia", "Australia", "Austria", "Azerbaijan", "Bahamas", "Bahrain",
+  "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan",
+  "Bolivia", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burundi", "Cambodia",
+  "Cameroon", "Canada", "Chad", "Chile", "China", "Colombia", "Comoros",
+  "Congo", "Croatia", "Cuba", "Cyprus", "Denmark", "Djibouti", "Dominica",
+  "Ecuador", "Egypt", "Eritrea", "Estonia", "Ethiopia", "Fiji", "Finland",
+  "France", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece",
+  "Grenada", "Guatemala", "Guinea", "Guyana", "Haiti", "Honduras", "Hungary",
+  "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel",
+  "Italy", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati",
+  "Kosovo", "Kuwait", "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho",
+  "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg", "Macedonia",
+  "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta",
+  "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco",
+  "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar", "Namibia",
+  "Nauru", "Nepal", "Netherlands", "Nicaragua", "Niger", "Nigeria", "Norway",
+  "Oman", "Pakistan", "Palau", "Palestine", "Panama", "Paraguay", "Peru",
+  "Philippines", "Poland", "Portugal", "Qatar", "Romania", "Russia", "Rwanda",
+  "Samoa", "Senegal", "Serbia", "Seychelles", "Singapore", "Slovakia",
+  "Slovenia", "Somalia", "Spain", "Sudan", "Suriname", "Swaziland", "Sweden",
+  "Switzerland", "Syria", "Taiwan", "Tajikistan", "Tanzania", "Thailand",
+  "Togo", "Tonga", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu", "Uganda",
+  "Ukraine", "Uruguay", "Uzbekistan", "Vanuatu", "Vatican", "Venezuela",
+  "Vietnam", "Yemen", "Zambia", "Zimbabwe"
+)
+COUNTRY_NAMES <- COUNTRY_NAMES[order(-nchar(COUNTRY_NAMES))]
+
+# Distinctive role-account tokens that are safe to match anywhere in the local
+# part, because they don't occur as substrings of real personal names.
+.ROLE_SUBSTR <- c(
+  "no-?reply", "do-?not-?reply", "journals?", "contracts?", "editorial",
+  "permissions?", "subscriptions?", "submissions?", "customer-?service",
+  "reprints?", "enquir(?:y|ies)", "inquir(?:y|ies)", "webmaster", "postmaster",
+  "hostmaster", "marketing", "feedback", "author-?services?"
+)
+# Short/generic role tokens that DO occur inside real names or addresses, so
+# only match them as a whole word/segment (bounded by start/end/._-).
+.ROLE_BOUNDARY <- c(
+  "info", "help(desk)?", "admin", "support", "contact", "sales", "press",
+  "media", "service", "abuse", "orders?", "comms?", "communications?"
+)
+
+.is_role_account <- function(emails) {
+  local_part <- str_extract(emails, "^[^@]+")
+  substr_hit <- str_detect(local_part, regex(paste(.ROLE_SUBSTR, collapse = "|"), ignore_case = TRUE))
+  boundary_hit <- str_detect(local_part, regex(
+    paste0("(^|[._-])(", paste(.ROLE_BOUNDARY, collapse = "|"), ")([._-]|$)"),
+    ignore_case = TRUE
+  ))
+  substr_hit | boundary_hit
+}
+
 .clean_emails <- function(x) {
   x <- unique(x[!is.na(x) & nzchar(x)])
   # Trim trailing punctuation that EPMC affiliation strings sometimes carry
   x <- str_replace(x, "[\\.;,)]+$", "")
-  # Drop obvious noise/boilerplate
-  x[!str_detect(x, regex(
-    "(example\\.com|sentry\\.io|wixpress|noreply|donotreply|@2x|@1x|sample@|journalpermissions@|permissions@|reprints@|customerservice@|subscriptions@|info@frontiers|webmaster@)",
-    ignore_case = TRUE))]
+
+  # Drop a URL/protocol that got glued directly onto the domain with no
+  # separator (e.g. "...uni-giessen.dehttp://www...") — keep everything up to
+  # the shortest valid-looking TLD that precedes the "http"/"www".
+  x <- str_replace(x, regex(
+    "^(.*@.*\\.[a-zA-Z]{2,}?)(?:https?|www)\\S*$", ignore_case = TRUE
+  ), "\\1")
+
+  # Drop a country/affiliation name glued onto the front with no separator
+  # (e.g. "...Giessen, Germanydoris.braun@..."). Case-sensitive so it only
+  # strips the Title-Case country text, not a lowercase coincidental match.
+  x <- str_replace(x, paste0(
+    "^(", paste(COUNTRY_NAMES, collapse = "|"), ")([A-Za-z0-9][^@]*@.*)$"
+  ), "\\2")
+
+  # Drop generic noise/boilerplate domains and role/journal-office accounts
+  x <- x[!str_detect(x, regex("(example\\.com|sentry\\.io|wixpress|@2x|@1x|sample@)", ignore_case = TRUE))]
+  x[!.is_role_account(x)]
+}
+
+# Single-value wrapper around .clean_emails() for cleaning one already-stored
+# email at a time (e.g. a column in emails_authors.csv) — returns NA if the
+# email is missing or turns out to be a role/junk account.
+clean_email_value <- function(e) {
+  if (is.na(e) || !nzchar(e)) return(NA_character_)
+  cleaned <- .clean_emails(e)
+  if (length(cleaned) == 0) NA_character_ else cleaned[[1]]
 }
 
 # ---- 1. Europe PMC ---------------------------------------------------------
