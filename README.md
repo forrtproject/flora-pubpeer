@@ -1,7 +1,7 @@
 # Pubpeer Comments on Replications and Reproductions
 
 ## Aim
-RepNote is the PubPeer integration of the FORRT Library of Replication Attempts (FLoRA). It is a proactive method to make researchers aware of replications of their own and others' research. For original studies for which there is a replication attempt in FLoRA, a publicly visible comment is posted on PubPeer.
+RepNote is the PubPeer integration of the FORRT Library of Reproduction and Replication Attempts (FLoRA). It is a proactive method to make researchers aware of replications of their own and others' research. For original studies for which there is a replication attempt in FLoRA, a publicly visible comment is posted on PubPeer.
 
 ## Funding
 This project is funded by UK Research and Innovation (UKRI) as part of the Making Replications Count project (https://forrt.org/marco/). 
@@ -11,7 +11,7 @@ This project is funded by UK Research and Innovation (UKRI) as part of the Makin
 <summary>What is RepNote?</summary>
 
 <br>RepNote is a tool that makes replications more visible and linked to the original
-research. We link the replications from the FORRT Library of Replication Attempts
+research. We link the replications from the FORRT Library of Reproduction and Replication Attempts
 (FLoRA) to original studies and create post-publication comments on [pubpeer.com](http://pubpeer.com)
 containing information on replication and reproduction attempts (i.e., number of
 replications, description of replication outcome, and success of replications).<br><br> 
